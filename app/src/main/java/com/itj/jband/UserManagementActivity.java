@@ -6,9 +6,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -102,6 +105,7 @@ public class UserManagementActivity extends AppCompatActivity {
     private void importPhotoFromGallery() {
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setType(android.provider.MediaStore.Images.Media.CONTENT_TYPE);
+        intent.putExtra("crop", true);
         startActivityForResult(intent, REQUEST_IMAGE_FROM_ALBUM);
     }
 
@@ -140,29 +144,24 @@ public class UserManagementActivity extends AppCompatActivity {
                     mImageUri = data.getData();
                 }
 
-                Log.d(TAG, "imageCaptureUri = " + mImageUri);
-                Log.d(TAG, "imageCaptureUri = " + mImageUri);
-                Log.d(TAG, "imageCaptureUri = " + mImageUri);
-                Log.d(TAG, "imageCaptureUri = " + mImageUri);
-                /*Intent intent = new Intent("com.android.camera.action.CROP");
-                intent.setDataAndType(mImageUri, "image*//*");
+                File file = new File(getAlbumStorageDir(getPackageName()), "temp_photo.jpg");
+                Intent intent = new Intent("com.android.camera.action.CROP");
+                intent.setDataAndType(mImageUri, "image/*");
                 intent.putExtra("outputX", 200);
                 intent.putExtra("outputY", 200);
                 intent.putExtra("aspectX", 1);
                 intent.putExtra("aspectY", 1);
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(file));
                 intent.putExtra("scale", true);
                 intent.putExtra("return-data", true);
-                startActivityForResult(intent, REQUEST_CROP_FROM_CAMERA);*/
+                startActivityForResult(intent, REQUEST_CROP_FROM_CAMERA);
             }
         } else if (requestCode == REQUEST_CROP_FROM_CAMERA) {
             if (resultCode == RESULT_OK) {
-                final Bundle extras = data.getExtras();
-
-                if(extras != null)
-                {
-                    Bitmap photo = extras.getParcelable("data");
-                    mPhoto.setImageBitmap(photo);
-                }
+                File file = new File(getAlbumStorageDir(getPackageName()), "temp_photo.jpg");
+                Bitmap bitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+                BitmapDrawable d = new BitmapDrawable(getResources(), bitmap);
+                mPhoto.setImageDrawable(d);
             }
         }
     }

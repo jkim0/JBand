@@ -16,9 +16,7 @@ public class ProviderContract {
     public static class JBandBaseColumns implements BaseColumns {
         public static final String SCHEME = "content://";
 
-        public static final String COLUMN_NAME_SORT_KEY = "sort_key";
-
-        public static final String DEFAULT_SORT_ORDER = COLUMN_NAME_SORT_KEY + " ASC"; // ASC or DESC
+        public static final String DEFAULT_SORT_ORDER = _ID + " ASC"; // ASC or DESC
     }
 
     public static final class Steps extends  JBandBaseColumns {
@@ -50,11 +48,11 @@ public class ProviderContract {
     public static final class Schedule extends JBandBaseColumns {
         public Schedule() {}
 
-        public static final String TABLE_NAME = "Schedules";
+        public static final String TABLE_NAME = "schedules";
 
-        private static final String PATH_SCHEDULE = "/schedule";
+        private static final String PATH_SCHEDULE = "/schedules";
 
-        private static final String PATH_SCHEDULE_ID = "/schedule/";
+        private static final String PATH_SCHEDULE_ID = "/schedules/";
 
         public static final int SCHEDULE_ID_PATH_POSITION = 1;
 

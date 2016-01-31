@@ -1,31 +1,37 @@
 package com.itj.jband;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.Parcel;
-import android.os.Parcelable;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+import android.widget.CompoundButton;
+import android.widget.CursorAdapter;
 import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
 
-import java.util.ArrayList;
+import com.itj.jband.databases.ProviderContract;
 
-public class ScheduleManagementActivity extends AppCompatActivity {
+public class ScheduleManagementActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = ScheduleManagementActivity.class.getSimpleName();
 
     private ListView mListView;
 
-    private ArrayList<Schedule> mData = new ArrayList<Schedule>();
+    private static final int SCHEDULE_LIST_LOADER = 1;
 
     private static final int REQUEST_ADD_SCHEDULE = 1;
     private static final int REQUEST_EDIT_SCHEDULE = 2;
@@ -43,12 +49,12 @@ public class ScheduleManagementActivity extends AppCompatActivity {
         getSupportActionBar().setDisplayShowHomeEnabled(true);
 
         mListView = (ListView)findViewById(R.id.alram_list);
-        mAdapter = new ScheduleListAdapter(this, R.layout.schedule_list_item, mData);
+        mAdapter = new ScheduleListAdapter(this, null, 0);
         mListView.setAdapter(mAdapter);
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                startEditActivity(mAdapter.getItem(position));
+                startEditActivity(id);
             }
         });
 
@@ -56,24 +62,25 @@ public class ScheduleManagementActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startEditActivity(null);
+                startEditActivity(-1);
             }
         });
 
-        addSchedule(new Schedule("병원 가는 시간", "병원 가!!", new boolean[]{false, false, true, true, true, false, false}, 2, 0, true));
+        getSupportLoaderManager().initLoader(SCHEDULE_LIST_LOADER, null, this);
+        //addSchedule(new Schedule("병원 가는 시간", "병원 가!!", new boolean[]{false, false, true, true, true, false, false}, 2, 0, true));
     }
 
-    private void startEditActivity(Schedule schedule) {
+    private void startEditActivity(long id) {
         Intent intent = new Intent(ScheduleManagementActivity.this, ScheduleEditActivity.class);
         int requestCode = REQUEST_ADD_SCHEDULE;
-        if (schedule != null) {
-            intent.putExtra("schedule", schedule);
+        if (id >= 0) {
+            intent.putExtra("schedule_id", id);
             requestCode = REQUEST_EDIT_SCHEDULE;
         }
         startActivityForResult(intent, requestCode);
     }
 
-    @Override
+    /*@Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
             Schedule schedule = (Schedule)data.getParcelableExtra("schedule");
@@ -88,7 +95,7 @@ public class ScheduleManagementActivity extends AppCompatActivity {
                 }
             }
         }
-    }
+    }*/
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -100,148 +107,73 @@ public class ScheduleManagementActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void addSchedule(Schedule schedule) {
-        mAdapter.add(schedule);
-    }
+    public class ScheduleListAdapter extends CursorAdapter {
 
-    private void updateSchedule(Schedule schedule) {
-        Schedule src = mAdapter.getItem(schedule.mIndex);
-        mAdapter.remove(src);
-        mAdapter.insert(schedule, schedule.mIndex);
-    }
-
-    private void deleteSchedule(Schedule schedule) {
-        Schedule src = mAdapter.getItem(schedule.mIndex);
-        mAdapter.remove(src);
-    }
-
-    public static class Schedule implements Parcelable {
-        public String mName;
-        public String mNofi;
-        public boolean[] mDays;
-        public int mHour;
-        public int mMin;
-        public boolean mReportLocation;
-        public boolean mOn = false;
-        public int mIndex = -1;
-
-        public Schedule() {}
-
-        public Schedule(String name, String noti, boolean[] days, int hour, int min, boolean reportLocation) {
-            mName = name;
-            mNofi = noti;
-            mDays = days;
-            mHour = hour;
-            mMin = min;
-            mReportLocation = reportLocation;
-            mOn = false;
+        public ScheduleListAdapter(Context context, Cursor cursor, int flags) {
+            super(context, cursor, flags);
         }
 
         @Override
-        public int describeContents() {
-            return 0;
+        public View newView(Context context, Cursor cursor, ViewGroup parent) {
+            View view = LayoutInflater.from(context).inflate(R.layout.schedule_list_item, parent, false);
+            ViewHolder holder = new ViewHolder();
+            holder.mName = (TextView)view.findViewById(R.id.text_view_schedule_name);
+            holder.mDays = (TextView)view.findViewById(R.id.text_view_schedule_days);
+            holder.mTime = (TextView)view.findViewById(R.id.text_view_schedule_time);
+            holder.mAmPm = (TextView)view.findViewById(R.id.text_view_schedule_am_pm);
+            holder.mReportLocation = (TextView)view.findViewById(R.id.text_view_report_location);
+            holder.mSwitch = (Switch)view.findViewById(R.id.schedule_switch);
+            view.setTag(holder);
+
+            return view;
         }
 
         @Override
-        public void writeToParcel(Parcel out, int flags) {
-            out.writeString(mName);
-            out.writeString(mNofi);
-            out.writeInt(mDays.length);
-            out.writeBooleanArray(mDays);
-            out.writeInt(mHour);
-            out.writeInt(mMin);
-            out.writeInt(mReportLocation ? 1 : 0);
-            out.writeInt(mOn ? 1 : 0);
-            out.writeInt(mIndex);
-        }
-
-        public static final Parcelable.Creator<Schedule> CREATOR = new
-                Parcelable.Creator<Schedule>() {
-                    public Schedule createFromParcel(Parcel in) {
-                        return new Schedule(in);
-                    }
-
-                    public Schedule[] newArray(int size) {
-                        return new Schedule[size];
-                    }
-                };
-
-        private Schedule(Parcel in) {
-            readFromParcel(in);
-        }
-
-        public void readFromParcel(Parcel in) {
-            mName = in.readString();
-            mNofi = in.readString();
-            mDays = new boolean[in.readInt()];
-            in.readBooleanArray(mDays);
-            mHour = in.readInt();
-            mMin = in.readInt();
-            mReportLocation = in.readInt() == 0 ? false : true;
-            mOn = in.readInt() == 0 ? false : true;
-            mIndex = in.readInt();
-        }
-    }
-
-    private class ScheduleListAdapter extends ArrayAdapter<Schedule> {
-        public ScheduleListAdapter(Context context, int reourceId, ArrayList<Schedule> items) {
-            super(context, reourceId, items);
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            if (convertView == null) {
-                convertView = getLayoutInflater().inflate(R.layout.schedule_list_item, null);
-            }
-
-            bindView(position, convertView);
-
-            return convertView;
-        }
-
-        private void bindView(int position, View view) {
+        public void bindView(View view, Context context, Cursor cursor) {
             ViewHolder holder = (ViewHolder)view.getTag();
-            Log.d(TAG, "holder = " + holder);
-            if (holder == null) {
-                holder = new ViewHolder();
-                holder.mName = (TextView)view.findViewById(R.id.text_view_schedule_name);
-                holder.mDays = (TextView)view.findViewById(R.id.text_view_schedule_days);
-                holder.mTime = (TextView)view.findViewById(R.id.text_view_schedule_time);
-                holder.mAmPm = (TextView)view.findViewById(R.id.text_view_schedule_am_pm);
-                holder.mReportLocation = (TextView)view.findViewById(R.id.text_view_report_location);
-                holder.mSwitch = (Switch)view.findViewById(R.id.schedule_switch);
-                view.setTag(holder);
-            }
+            int idColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule._ID);
+            int nameColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_NAME);
+            int daysColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS);
+            int hourColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR);
+            int minColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_MIN);
+            int reportLocationColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION);
+            int isOnColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON);
 
-            Schedule schedule = getItem(position);
-            schedule.mIndex = position;
+            String name = cursor.getString(nameColumnIndex);
+            int days = cursor.getInt(daysColumnIndex);
+            int hour = cursor.getInt(hourColumnIndex);
+            int min = cursor.getInt(minColumnIndex);
+            boolean reportLocation = cursor.getInt(reportLocationColumnIndex) == 0 ? false : true;
+            boolean isOn = cursor.getInt(isOnColumnIndex) == 0 ? false : true;
+            final long id = cursor.getLong(idColumnIndex);
 
-            holder.mReportLocation.setVisibility(schedule.mOn ? View.VISIBLE : View.INVISIBLE);
-            holder.mName.setText(schedule.mName);
-
-            StringBuilder sb = new StringBuilder();
-            String[] days = getResources().getStringArray(R.array.days_of_week);
-            int length = schedule.mDays.length;
-            for (int i = 0; i < length; i++) {
-                if (schedule.mDays[i]) {
-                    sb.append(days[i] + " ");
+            holder.mSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    ContentValues values = new ContentValues();
+                    values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON, isChecked);
+                    getContentResolver().update(
+                            Uri.withAppendedPath(ProviderContract.Schedule.CONTENT_SCHEDULE_ID_URI_BASE, "" + id),values, null, null);
                 }
-            }
+            });
 
-            holder.mDays.setText(sb.toString());
+            holder.mName.setText(name);
 
-            boolean pm = schedule.mHour > 12;
+            holder.mDays.setText(Utils.getDaysStringFromInteger(ScheduleManagementActivity.this, days));
+
+            boolean pm = hour > 12;
             if (pm) {
                 holder.mAmPm.setText(getString(R.string.pm));
             } else {
                 holder.mAmPm.setText(getString(R.string.am));
             }
-
-            int hour = schedule.mHour;
             if (hour > 12) {
                 hour -= 12;
             }
-            holder.mTime.setText(String.format(getString(R.string.alarm_time_format), hour, schedule.mMin));
+
+            holder.mTime.setText(String.format(getString(R.string.alarm_time_format), hour, min));
+
+            holder.mSwitch.setChecked(isOn);
         }
     }
 
@@ -254,4 +186,30 @@ public class ScheduleManagementActivity extends AppCompatActivity {
         public Switch mSwitch;
     }
 
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        String[] columns = {
+                ProviderContract.Schedule._ID,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_NAME,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_MIN,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON
+        };
+
+        Uri uri = ProviderContract.Schedule.CONTENT_URI;
+
+        return new CursorLoader(this, uri, columns, null, null, ProviderContract.Schedule.DEFAULT_SORT_ORDER);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+        mAdapter.swapCursor(cursor);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        mAdapter.swapCursor(null);
+    }
 }

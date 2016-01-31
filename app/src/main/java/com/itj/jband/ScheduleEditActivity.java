@@ -3,33 +3,38 @@ package com.itj.jband;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.TimePickerDialog;
+import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.TimePicker;
 
+import com.itj.jband.databases.ProviderContract;
+
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
-public class ScheduleEditActivity extends AppCompatActivity {
-    private static final String TAG = ScheduleEditActivity.class.getSimpleName();
+public class ScheduleEditActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+    private static final String TAG = ScheduleEditActivity.class.getSimpleName();;
 
-    private ScheduleManagementActivity.Schedule mSchedule;
+    private long mScheduleId = -1;
 
     private int mHour = -1;
     private int mMin = -1;
@@ -40,7 +45,9 @@ public class ScheduleEditActivity extends AppCompatActivity {
     private TextView mScheduleTime;
     private CheckBox mCheckBoxReport;
 
-    private boolean[] mSelectedDays = new boolean[]{false, false, false, false, false, false, false};
+    private static final int SCHEDULE_LOADER = 1;
+
+    private int mSelectedDays = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,11 +70,11 @@ public class ScheduleEditActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 DaySelectDialogFragment fragment = new DaySelectDialogFragment();
-                fragment.setSelectedItem(mSelectedDays);
+                fragment.setSelectedItem(Utils.getBooleanDaysFromInteger(mSelectedDays));
                 fragment.setItemSelectedListener(new DaySelectDialogFragment.OnItemSelectedListener() {
                     @Override
                     public void onSelectItems(boolean[] items) {
-                        setDays(items);
+                        setDays(Utils.getDaysFromBooleanArray(items));
                     }
                 });
                 fragment.show(getSupportFragmentManager(), DaySelectDialogFragment.class.getSimpleName());
@@ -80,8 +87,8 @@ public class ScheduleEditActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 GregorianCalendar calendar = new GregorianCalendar();
-                int hour = mSchedule != null ? mSchedule.mHour : calendar.get(Calendar.HOUR_OF_DAY);
-                int min = mSchedule != null ? mSchedule.mMin : calendar.get(Calendar.MINUTE);
+                int hour = mHour < 0 ? calendar.get(Calendar.HOUR_OF_DAY) : mHour;
+                int min = mMin < 0 ? calendar.get(Calendar.MINUTE) : mMin;
                 new TimePickerDialog(ScheduleEditActivity.this, new TimePickerDialog.OnTimeSetListener() {
                     @Override
                     public void onTimeSet(TimePicker timePicker, int hour, int min) {
@@ -95,9 +102,9 @@ public class ScheduleEditActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         if (intent != null) {
-            mSchedule = intent.getParcelableExtra("schedule");
-            if (mSchedule != null) {
-                initValues();
+            mScheduleId = intent.getLongExtra("schedule_id", -1);
+            if (mScheduleId >= 0) {
+                getSupportLoaderManager().initLoader(SCHEDULE_LOADER, null, this);
             }
         }
     }
@@ -108,7 +115,7 @@ public class ScheduleEditActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.menu_schedule_edit, menu);
 
         MenuItem item = menu.findItem(R.id.action_delete);
-        if (mSchedule == null) {
+        if (mScheduleId < 0) {
             item.setVisible(false);
         }
 
@@ -130,26 +137,45 @@ public class ScheduleEditActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void initValues() {
-        mScheduleName.setText(mSchedule.mName);
-        mScheduleNoti.setText(mSchedule.mNofi);
-        setDays(mSchedule.mDays);
-        setTime(mSchedule.mHour, mSchedule.mMin);
-        mCheckBoxReport.setChecked(mSchedule.mReportLocation);
+    private void initValues(Cursor cursor) {
+        String selection = ProviderContract.Schedule._ID + " = ?";
+        String[] selectionArgs = { String.valueOf(mScheduleId) };
+
+        String[] columns = {
+                ProviderContract.Schedule._ID,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_NAME,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_MIN,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION,
+        };
+
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                int nameColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_NAME);
+                int notiColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_NOTIFICATION);
+                int daysColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS);
+                int hourColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR);
+                int minColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_MIN);
+                int reportLocationColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION);
+
+                mScheduleName.setText(cursor.getString(nameColumnIndex));
+                mScheduleNoti.setText(cursor.getString(notiColumnIndex));
+
+                setDays(cursor.getInt(daysColumnIndex));
+                setTime(cursor.getInt(hourColumnIndex), cursor.getInt(minColumnIndex));
+
+                boolean report = cursor.getInt(reportLocationColumnIndex) == 0 ? false : true;
+                mCheckBoxReport.setChecked(report);
+            }
+
+            cursor.close();
+        };
     }
 
-    private void setDays(boolean[] days) {
-        StringBuilder sb = new StringBuilder();
-        String[] dayLabels = getResources().getStringArray(R.array.days_of_week);
-        int length = days.length;
-        for (int i = 0; i < length; i++) {
-            if (days[i]) {
-                sb.append(dayLabels[i] + " ");
-            }
-        }
-
-        mSelectedDays = days;
-        mScheduleDays.setText(sb.toString());
+    private void setDays(int dayValue) {
+        mSelectedDays = dayValue;
+        mScheduleDays.setText(Utils.getDaysStringFromInteger(this, dayValue));
     }
 
     private void setTime(int hour, int min) {
@@ -175,28 +201,27 @@ public class ScheduleEditActivity extends AppCompatActivity {
         String noti = mScheduleNoti.getText().toString();
         boolean report = mCheckBoxReport.isChecked();
 
-        if (mSchedule == null) {
-            mSchedule = new ScheduleManagementActivity.Schedule();
+        ContentValues values = new ContentValues();
+        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_NAME, name);
+        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_NOTIFICATION, noti);
+        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS, mSelectedDays);
+        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR, mHour);
+        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_MIN, mMin);
+        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION, report);
+
+        if (mScheduleId >= 0) {
+            getContentResolver().update(
+                    Uri.withAppendedPath(ProviderContract.Schedule.CONTENT_SCHEDULE_ID_URI_BASE, "" + mScheduleId),
+                    values, null, null);
+        } else {
+            getContentResolver().insert(ProviderContract.Schedule.CONTENT_URI, values);
         }
 
-        mSchedule.mName = name;
-        mSchedule.mNofi = noti;
-        mSchedule.mDays = mSelectedDays;
-        mSchedule.mHour = mHour;
-        mSchedule.mMin = mMin;
-        mSchedule.mReportLocation = report;
-
-        Intent intent = new Intent();
-        intent.putExtra("schedule", mSchedule);
-        setResult(RESULT_OK, intent);
         finish();
     }
 
     void deleteSchedule() {
-        Intent intent = new Intent();
-        intent.putExtra("schedule", mSchedule);
-        intent.putExtra("deleted", true);
-        setResult(RESULT_OK, intent);
+        getContentResolver().delete(ProviderContract.Schedule.CONTENT_URI, ProviderContract.Schedule._ID + " = " + mScheduleId, null);
         finish();
     }
 
@@ -241,4 +266,31 @@ public class ScheduleEditActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        String[] columns = {
+                ProviderContract.Schedule._ID,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_NAME,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_NOTIFICATION,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_MIN,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION,
+                ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON
+        };
+
+        Uri uri = ProviderContract.Schedule.CONTENT_URI;
+        String selection = ProviderContract.Schedule._ID + " = " + mScheduleId;
+        return new CursorLoader(this, uri, columns, selection, null, ProviderContract.Schedule.DEFAULT_SORT_ORDER);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+        initValues(cursor);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+
+    }
 }

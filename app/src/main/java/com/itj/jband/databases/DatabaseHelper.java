@@ -26,7 +26,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR + " INTEGER,"
                 + ProviderContract.Schedule.COLUMN_SCHEDULE_MIN + " INTEGER,"
                 + ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION + " INTEGER DEFAULT 0,"
-                + ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON + " INTEGER DEFAULT 0,"
+                + ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON + " INTEGER DEFAULT 0"
                 + ");");
     }
 
