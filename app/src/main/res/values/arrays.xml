@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="main_list_items">
+        <item>@string/main_list_item1</item>
+        <item>@string/main_list_item2</item>
+        <item>@string/main_list_item3</item>
+    </string-array>
+
+    <string-array name="select_photo">
+        <item>@string/from_gallery</item>
+        <item>@string/from_camera</item>
+    </string-array>
+
+    <string-array name="days_of_week">
+        <item>@string/label_day_sun</item>
+        <item>@string/label_day_mon</item>
+        <item>@string/label_day_tue</item>
+        <item>@string/label_day_wed</item>
+        <item>@string/label_day_thu</item>
+        <item>@string/label_day_fri</item>
+        <item>@string/label_day_sat</item>
+        <item>@string/label_every_day</item>
+    </string-array>
+
+    <string-array name="day_labels">
+        <item>@string/label_day_sunday</item>
+        <item>@string/label_day_monday</item>
+        <item>@string/label_day_tuesday</item>
+        <item>@string/label_day_wednesday</item>
+        <item>@string/label_day_thursday</item>
+        <item>@string/label_day_friday</item>
+        <item>@string/label_day_saturday</item>
+    </string-array>
+</resources>

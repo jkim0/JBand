@@ -1,0 +1,225 @@
+<resources>
+
+    <string name="action_settings">설정</string>
+    <string name="action_save">저장</string>
+    <string name="action_schedule_managements">스케줄 관리</string>
+    <string name="action_user_managements">사용자 관리</string>
+    <string name="action_check_activities">활동량 체크</string>
+    <string name="action_sleep_managements">수면 관리</string>
+    <string name="action_usage_statistics">사용량 통계</string>
+    <string name="action_device_manage">장치 관리</string>
+    <string name="action_delete">삭제</string>
+    <string name="action_edit">수정</string>
+
+    <string name="prefix_step_counter">Step Count - </string>
+    <string name="prefix_step_dector">Step Detect - </string>
+    <string name="prefix_accelerometor">Accel - </string>
+
+    <string name="page_title_steps">Steps</string>
+    <string name="page_title_sleeps">Sleeps</string>
+    <string name="page_title_weights">Weights</string>
+
+    <string name="section_title_steps">Total Steps</string>
+    <string name="section_title_sleeps">Total Sleeps</string>
+
+    <string name="section_format">Hello World from section: %1$d</string>
+
+    <string name="title_activity_user_info_edit">사용자 정보 관리</string>
+
+    <string name="title_group_gender">성별</string>
+    <string name="label_radio_button_male">남성</string>
+    <string name="label_radio_button_female">여성</string>
+    <string name="label_name">이름</string>
+    <string name="edit_hint_input_name">이름을 입력해 주세요(8글자)</string>
+    <string name="label_phone_number">전화번호</string>
+    <string name="label_height">키</string>
+    <string name="label_weight">몸무게</string>
+    <string name="label_button_edit">수정</string>
+    <string name="title_photo_selector_popup">사진 선택</string>
+    <string name="from_gallery">사진 앨범에서 선택</string>
+    <string name="from_camera">사진 촬영</string>
+    <string name="delete_photo">사진 삭제</string>
+
+    <string name="title_activity_service_agreement">이용 약관</string>
+    <string name="msg_service_agreement_content">서비스 이용을 위해 약관 동의가 필요합니다.</string>
+    <string name="msg_service_aggrement_detail">각 약관을 선택 하시면 상세 약관을 확인 하실 수 있습니다.</string>
+    <string name="label_checkbox_whole_agreement">전체 이용 약관 동의</string>
+    <string name="label_essential">[필수]</string>
+    <string name="label_i_love_service_agreement">I-love 서비스 이용 약관</string>
+    <string name="label_info_collect_agreement">개인정보 수집/이용 동의</string>
+    <string name="label_info_support_aggrement">개인정보의 제3자 제공 동의</string>
+
+    <string name="agreement_sample">"정보통신망법 규정에 따라 네이버에 회원가입 신청하시는 분께
+        수집하는 개인정보의 항목, 개인정보의 수집 및 이용목적, 개인정보의 보유 및 이용기간을 안내
+        드리오니 자세히 읽은 후 동의하여 주시기 바랍니다.\n
+        1. 수집하는 개인정보\n
+        이용자는 회원가입을 하지 않아도 정보 검색, 뉴스 보기 등 대부분의 네이버 서비스를 회원과
+        동일하게 이용할 수 있습니다. 이용자가 메일, 캘린더, 카페, 블로그 등과 같이 개인화 혹은
+        회원제 서비스를 이용하기 위해 회원가입을 할 경우, 네이버는 서비스 이용을 위해 필요한
+        최소한의 개인정보를 수집합니다.\n
+        회원가입 시점에 네이버가 이용자로부터 수집하는 개인정보는 아래와 같습니다.\n
+        - 회원 가입 시에 ‘아이디, 비밀번호, 이름, 생년월일, 성별, 가입인증 휴대폰번호’를
+        필수항목으로 수집합니다. 만약 이용자가 입력하는 생년월일이 만14세 미만 아동일 경우에는
+        법정대리인 정보를 추가로 수집합니다. 그리고 선택항목으로 이메일 주소를 수집합니다.\n
+        - 단체아이디로 회원 가입 시에 단체아이디, 단체이름, 법인명(단체명), 대표자명, 대표 전화번호
+        , 사업장소재지, 관리자 아이디, 관리자 휴대폰번호를 필수항목으로 수집합니다.\n
+        서비스 이용 과정에서 이용자로부터 수집하는 개인정보는 아래와 같습니다.\n
+        NAVER 내의 개별 서비스 이용, 이벤트 응모 및 경품 신청 과정에서 해당 서비스의 이용자에 한해
+        추가 개인정보 수집이 발생할 수 있습니다. 추가로 개인정보를 수집할 경우에는 해당 개인정보
+        수집 시점에서 이용자에게 ‘수집하는 개인정보 항목, 개인정보의 수집 및 이용목적, 개인정보의
+        보관기간’에 대해 안내 드리고 동의를 받습니다.\n
+        서비스 이용 과정에서 IP 주소, 쿠키, 방문일시·불량 이용 기록 등의 서비스 이용 기록, 기기
+        정보가 생성되어 수집될 수 있습니다.\n
+        구체적으로 1) 서비스 이용 과정에서 이용자에 관한 정보를 정보통신서비스 제공자가 자동화
+        된 방법으로 생성하여 이를 저장(수집)하거나, 2) 이용자 기기의 고유한 정보를 원래의 값을 확인
+        하지 못하도록 안전하게 변환한 후에 수집하는 경우를 의미합니다.\n
+        2. 수집한 개인정보의 이용\n
+        네이버는 회원관리, 서비스 개발・제공 및 향상, 안전한 인터넷 이용환경 구축 등 아래의 목적
+        으로만 개인정보를 이용합니다.\n
+        - 회원 가입 의사의 확인, 연령 확인 및 법정대리인 동의 진행, 이용자 및 법정대리인의 본인
+        확인, 이용자 식별, 회원탈퇴 의사의 확인 등 회원관리를 위하여 개인정보를 이용합니다.\n
+        - 콘텐츠 등 기존 서비스 제공(광고 포함)에 더하여, 인구통계학적 분석, 서비스 방문 및 이용
+        기록의 분석, 개인정보 및 관심에 기반한 이용자간 관계의 형성, 지인 및 관심사 등에 기반한 맞
+        춤형 서비스 제공 등 신규 서비스 요소의 발굴 및 기존 서비스 개선 등을 위하여 개인정보를 이용
+        합니다.\n
+        - 법령 및 네이버 이용약관을 위반하는 회원에 대한 이용 제한 조치, 부정 이용 행위를 포함
+        하여 서비스의 원활한 운영에 지장을 주는 행위에 대한 방지 및 제재, 계정도용 및 부정
+        거래 방지, 약관 개정 등의 고지사항 전달, 분쟁조정을 위한 기록 보존, 민원처리 등 이용자 보
+        호 및 서비스 운영을 위하여 개인정보를 이용합니다.\n
+        - 유료 서비스 제공에 따르는 본인인증, 구매 및 요금 결제, 상품 및 서비스의 배송을 위하여 개인
+        정보를 이용합니다.\n
+        - 이벤트 정보 및 참여기회 제공, 광고성 정보 제공 등 마케팅 및 프로모션 목적으로 개인
+        정보를 이용합니다.\n
+        - 서비스 이용기록과 접속 빈도 분석, 서비스 이용에 대한 통계, 서비스 분석 및 통계에 따른 맞
+        춤 서비스 제공 및 광고 게재 등에 개인정보를 이용합니다.\n
+        - 보안, 프라이버시, 안전 측면에서 이용자가 안심하고 이용할 수 있는 서비스 이용환경 구축을 위
+        해 개인정보를 이용합니다.\n
+        3. 개인정보의 파기\n
+        회사는 원칙적으로 이용자의 개인정보를 회원 탈퇴 시 지체없이 파기하고 있습니다.\n
+        단, 이용자에게 개인정보 보관기간에 대해 별도의 동의를 얻은 경우, 또는 법령에서 일정 기간 정보
+        보관 의무를 부과하는 경우에는 해당 기간 동안 개인정보를 안전하게 보관합니다.\n
+        이용자에게 개인정보 보관기간에 대해 별도의 동의를 얻은 경우는 아래와 같습니다.\n
+        부정가입 및 징계기록 등의 부정이용기록은 부정 가입 및 이용 방지를 위하여 수집 시점으로
+        부터 6개월 간 보관하고 파기하고 있습니다. 부정이용기록 내 개인정보는 가입인증 휴대폰 번호
+        (만 14세 미만 회원의 경우 법정대리인 DI)가 있습니다.\n
+        결제도용, 카드깡 등 관련 법령 및 이용약관을 위반하는 네이버페이의 부정거래기록(아이디, 이
+        름, 휴대폰번호, 배송지 주소, IP주소, 쿠키, 기기정보)은 부정거래 방지 및 다른 선량한 이용
+        자의 보호, 안전한 거래 환경 보장을 위하여 수집 시점으로부터 3년간 보관하고 파기합니다.\n
+        전자상거래 등에서의 소비자 보호에 관한 법률, 전자금융거래법, 통신비밀보호법 등 법령에서 일정
+        기간 정보의 보관을 규정하는 경우는 아래와 같습니다. 네이버는 이 기간 동안 법령의 규정에 따
+        라 개인정보를 보관하며, 본 정보를 다른 목적으로는 절대 이용하지 않습니다.\n
+        - 전자상거래 등에서 소비자 보호에 관한 법률\n
+        계약 또는 청약철회 등에 관한 기록: 5년 보관\n
+        대금결제 및 재화 등의 공급에 관한 기록: 5년 보관\n
+        소비자의 불만 또는 분쟁처리에 관한 기록: 3년 보관\n
+        - 전자금융거래법\n
+        전자금융에 관한 기록: 5년 보관\n
+        - 통신비밀보호법\n
+        로그인 기록: 3개월"</string>
+
+    <string name="label_button_next">다음</string>
+
+    <string name="title_activity_authentication">사용자 인증</string>
+    <string name="msg_authenticati_consent">서비스 이용을 위해 사용자 인증이 필요 합니다. 첫 이용 시 ITJ Band도 함께 인증 하셔야 하며, 2분 이내로 인증을 하셔야 합니다.</string>
+    <string name="title_phone_authentication">* 본인 휴대폰 인증</string>
+    <string name="edit_hint_input_phone_number">본인 전화번호를 입력하세요.</string>
+    <string name="edit_hint_auth_number">인증번호 입력</string>
+    <string name="label_button_send_auth_number">인증번호 발송</string>
+    <string name="label_button_auth">사용자 인증</string>
+    <string name="msg_phone_number_error">휴대폰 번호를 올바르게 입력 해 주세요.</string>
+    <string name="msg_auth_fail_error">인증 번호가 올바르지 않거나 인증 시간이 만료 되었습니다. 다시 인증을 진행 해 주세요.</string>
+    <string name="title_popup_auth_error">사용자 인증</string>
+
+    <string name="main_list_item1">수면</string>
+    <string name="main_list_item2">활동량</string>
+    <string name="main_list_item3">건강 한마디</string>
+
+    <string name="title_activity_activity_detail">ActivityDetailActivity</string>
+    <string name="title_activity_alarm_manage">스케쥴 관리</string>
+
+    <string name="am">Am</string>
+    <string name="pm">Pm</string>
+
+    <string name="alarm_time_format">%1$02d:%2$02d</string>
+
+    <string name="sample_string_achievement_rate">Today achievement rate : 50<![CDATA[%]]></string>
+    <string name="sample_string_sleep_rate">Sleeping time during last night : 2 hour</string>
+    <string name="sample_string_today_steps">Total today steps : 2015 steps</string>
+
+    <string name="sample_string_meter">0 m</string>
+    <string name="sample_string_steps">0 steps</string>
+    <string name="sample_string_cal">0 cal</string>
+    <string name="sample_string_duration">0 min</string>
+
+    <string name="label_activity">Activity</string>
+    <string name="label_walking">Walking</string>
+    <string name="label_running">Running</string>
+
+    <string name="meter_format">%d m</string>
+    <string name="steps_format">%d steps</string>
+    <string name="cal_format">%d cal</string>
+    <string name="duration_format">%d min</string>
+
+    <string name="title_upgrade_popup">업그레이드 알림</string>
+    <string name="msg_upgrade_popup">새로운 버전이 있습니다. 업데이트 하시겠습니까?</string>
+
+    <string name="title_notification_popup">공지사항</string>
+
+    <string name="title_guide_popup">안내</string>
+    <string name="msg_network_status_error">네트워크 접속이 원할하지 않습니다. 잠시 후 다시 이용해 주세요.</string>
+    <string name="msg_usim_changed_error">전화번호 또는 USIM이 변경되어 재인증을 진행 합니다.</string>
+    <string name="msg_app_changed_error">APP 변조가 감지되어 종료 합니다. APP을 재설치 후 이용해 주세요.</string>
+
+    <string name="title_activity_schedule_edit">스케줄 편집</string>
+    <string name="label_schedule_name">스케줄명</string>
+    <string name="label_schedule_notification">발송 문구</string>
+    <string name="label_schedule_day">발송 요일</string>
+    <string name="label_schedule_time">발송 시간</string>
+    <string name="label_schedule_location">위치 조회</string>
+    <string name="edit_hint_schedule_name">스케줄명을 입력하세요. (10글자)</string>
+    <string name="edit_hint_schedule_notification">발송 문구를 입력하세요. (20글자)</string>
+    <string name="label_hint_schedule_day">발송 요일을 입력하세요.</string>
+    <string name="label_hint_schedule_time">발송 시간을 입력하세요.</string>
+    <string name="label_schedule_guide">스케줄 등록 시 정해진 시간에 ITJ Band에서 알림 이 동작 합니다.</string>
+    <string name="label_essential_guide">* 필수 등록 항목입니다.</string>
+    <string name="label_button_register">등록</string>
+    <string name="label_report_location">위치발송</string>
+
+    <string name="label_day_sun">일</string>
+    <string name="label_day_mon">월</string>
+    <string name="label_day_tue">화</string>
+    <string name="label_day_wed">수</string>
+    <string name="label_day_thu">목</string>
+    <string name="label_day_fri">금</string>
+    <string name="label_day_sat">토</string>
+    <string name="label_every_day">매일</string>
+
+    <string name="label_day_sunday">일요일</string>
+    <string name="label_day_monday">월요일</string>
+    <string name="label_day_tuesday">화요일</string>
+    <string name="label_day_wednesday">수요일</string>
+    <string name="label_day_thursday">목요일</string>
+    <string name="label_day_friday">금요일</string>
+    <string name="label_day_saturday">토요일</string>
+
+    <string name="title_day_select_popup">요일 선택</string>
+
+    <string name="title_activity_usage_statistic">ITJ Band 사용량 통계</string>
+    <string name="label_button_intialize">초기화</string>
+    <string name="label_text_monthly_statistics">월간 총 측정 시간 (%1$04d년 %2$02d월)</string>
+    <string name="label_text_daily_statistics">일일 측정량 통계</string>
+    <string name="label_text_statistics_guide">※ 1일부터 현재까지 올레똑똑에서 발신한 통화량 입니다.\n
+        ※ 사용량 초기화 시 이후 부터 다시 누적됩니다.</string>
+    <string name="title_popup_usage_statistics">ITJ Band 사용량 통계</string>
+    <string name="msg_popup_usage_statistics">기록된 모든 ITJ Band의 사용량 통 계를 초기화 하시겠습니까?</string>
+
+    <string name="sample_hour">00</string>
+    <string name="sample_min">44</string>
+    <string name="label_text_hour">시</string>
+    <string name="label_text_min">분</string>
+    <string name="string_format_hour">%1$02d</string>
+
+    <string name="label_button_delte">삭제</string>
+    <string name="label_photo_register">사진을 등록해 주세요.</string>
+
+</resources>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.itj.jband">
+
+    <uses-feature android:name="android.hardware.sensor.stepcounter" />
+    <uses-feature android:name="android.hardware.sensor.stepdetector" />
+    <uses-feature android:name="android.hardware.sensor.accelerometor" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
+
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".MainActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".LaunchScreenActivity"
+            android:theme="@style/AppTheme.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".SensorService"
+            android:enabled="true"
+            android:exported="true" />
+
+        <activity
+            android:name=".UserManagementActivity"
+            android:label="@string/title_activity_user_info_edit"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".AuthenticationActivity"
+            android:label="@string/title_activity_authentication"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".ActivityDetailActivity"
+            android:label="@string/title_activity_activity_detail"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <provider
+            android:name=".databases.SendsorMonitorProvider"
+            android:authorities="com.itj.jband.provider"
+            android:enabled="true"
+            android:exported="true" />
+
+        <activity
+            android:name=".ScheduleManagementActivity"
+            android:label="@string/title_activity_alarm_manage"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".DeviceManageActivity"
+            android:label="DeviceManageActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".ServiceAgreementActivity"
+            android:label="@string/title_activity_service_agreement"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".ScheduleEditActivity"
+            android:label="@string/title_activity_schedule_edit"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".UsageStatisticActivity"
+            android:label="@string/title_activity_usage_statistic"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <service
+            android:name=".GaiaControlService"
+            android:enabled="true"
+            android:exported="true"></service>
+    </application>
+
+</manifest>

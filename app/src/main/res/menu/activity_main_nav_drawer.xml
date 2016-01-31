@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_user_managements"
+        android:icon="@drawable/ic_account_circle_white_24dp"
+        android:title="@string/action_user_managements" />
+
+    <item
+        android:id="@+id/nav_schedume_managements"
+        android:icon="@drawable/ic_access_alarms_white_24dp"
+        android:title="@string/action_schedule_managements" />
+
+    <item
+        android:id="@+id/nav_check_activities"
+        android:icon="@drawable/ic_directions_run_white_24dp"
+        android:title="@string/action_check_activities" />
+
+    <item
+        android:id="@+id/nav_sleep_managements"
+        android:icon="@drawable/ic_hotel_white_24dp"
+        android:title="@string/action_sleep_managements" />
+
+    <item
+        android:id="@+id/nav_usage_statistics"
+        android:icon="@drawable/ic_assessment_white_24dp"
+        android:title="@string/action_usage_statistics" />
+
+
+    <item android:title="@string/action_settings">
+        <menu>
+            <item
+                android:id="@+id/nav_device_manage"
+                android:icon="@drawable/ic_smartphone_white_24dp"
+                android:title="@string/action_device_manage" />
+        </menu>
+    </item>
+
+</menu>
