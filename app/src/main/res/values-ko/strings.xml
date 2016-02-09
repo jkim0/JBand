@@ -205,7 +205,7 @@
     <string name="title_day_select_popup">요일 선택</string>
 
     <string name="title_activity_usage_statistic">ITJ Band 사용량 통계</string>
-    <string name="label_button_intialize">초기화</string>
+    <string name="label_button_initialize">초기화</string>
     <string name="label_text_monthly_statistics">월간 총 측정 시간 (%1$04d년 %2$02d월)</string>
     <string name="label_text_daily_statistics">일일 측정량 통계</string>
     <string name="label_text_statistics_guide">※ 1일부터 현재까지 올레똑똑에서 발신한 통화량 입니다.\n
@@ -222,4 +222,17 @@
     <string name="label_button_delte">삭제</string>
     <string name="label_photo_register">사진을 등록해 주세요.</string>
 
+    <string name="title_activity_activity_check">활동량 체크</string>
+    <string name="label_text_activity_check">활동량 체크</string>
+    <string name="label_text_amount_of_today">오늘의 활동량</string>
+    <string name="label_text_walks">걸음</string>
+    <string name="label_text_activity_of_day">일일 활동량</string>
+
+    <string name="title_activity_sleep_management">수면 관리</string>
+    <string name="label_section_day">일</string>
+    <string name="label_section_week">주</string>
+    <string name="label_section_month">월</string>
+
+    <string name="label_estimation_temp_hour">수면 목표 : 7 시간</string>
+    <string name="label_estimation_temp_rate">달성률 : 120 %</string>
 </resources>

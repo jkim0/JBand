@@ -14,6 +14,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
+import android.os.ParcelUuid;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -124,6 +125,11 @@ public class DeviceManageActivity extends AppCompatActivity {
             Log.d(TAG, "action = " + action);
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device= intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                if (device != null && device.getUuids() != null) {
+                    for (ParcelUuid id : device.getUuids()) {
+                        Log.d(TAG, "device name = " + device + " uuid = " + id.toString());
+                    }
+                }
                 mAdapter.add(device);
             }
         }

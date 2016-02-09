@@ -31,4 +31,10 @@
         <item>@string/label_day_friday</item>
         <item>@string/label_day_saturday</item>
     </string-array>
+
+    <string-array name="section_list">
+        <item>@string/label_section_day</item>
+        <item>@string/label_section_week</item>
+        <item>@string/label_section_month</item>
+    </string-array>
 </resources>

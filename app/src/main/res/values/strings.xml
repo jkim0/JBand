@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ITJ Band</string>
+    <string name="app_name">J Band</string>
 
     <string name="action_settings">Settings</string>
     <string name="action_save">Save</string>
@@ -203,7 +203,7 @@
     <string name="label_day_saturday">Saturday</string>
 
     <string name="title_activity_usage_statistic">ITJ Band Usage Statistics</string>
-    <string name="label_button_intialize">Intialize</string>
+    <string name="label_button_initialize">Intialize</string>
     <string name="label_text_monthly_statistics">Monthly Total Measure Time (%1$s %2$04d)</string>
     <string name="label_text_daily_statistics">Daily measured statistics</string>
     <string name="label_text_statistics_guide">※ 1일부터 현재까지 올레똑똑에서 발신한 통화량 입니다.\n
@@ -220,4 +220,20 @@
     <string name="label_button_delte">Delete</string>
     <string name="label_photo_register">사진을 등록해 주세요.</string>
 
+    <string name="title_activity_activity_check">Activity Check</string>
+    <string name="label_text_activity_check">Activity Check</string>
+    <string name="label_text_amount_of_today">Amount of today</string>
+    <string name="label_text_sample_today_walk">847</string>
+    <string name="label_text_walks">Steps</string>
+    <string name="label_text_activity_of_day">Activity of a day</string>
+    <string name="title_activity_sleep_management">Sleep Management</string>
+
+    <string name="label_section_day">Day</string>
+    <string name="label_section_week">Week</string>
+    <string name="label_section_month">Month</string>
+
+
+    <string name="label_partition_temp_day">2016.02.15</string>
+    <string name="label_estimation_temp_hour">Sleep goal : 7 hour</string>
+    <string name="label_estimation_temp_rate">Achieved rate : 120 %</string>
 </resources>

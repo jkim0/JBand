@@ -81,7 +81,16 @@
         <service
             android:name=".GaiaControlService"
             android:enabled="true"
-            android:exported="true"></service>
+            android:exported="true" />
+
+        <activity
+            android:name=".ActivityCheckActivity"
+            android:label="@string/title_activity_activity_check"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".SleepManagementActivity"
+            android:label="@string/title_activity_sleep_management"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 
 </manifest>

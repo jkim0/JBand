@@ -31,7 +31,7 @@ public class GaiaLink
     private static final String TAG = "GaiaLink";
     
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-    private static final UUID GAIA_UUID = UUID.fromString("A5E648B6-374D-422D-A7DF-92259D4E7817");
+    private static final UUID GAIA_UUID = UUID.fromString("00001107-D102-11E1-9B23-00025B00A5A5");
 
     private static final String NOT_CONNECTED = "GaiaLink is not connected";
     
@@ -119,7 +119,7 @@ public class GaiaLink
     private Handler mLogHandler = null;
     private Handler mDeviceSearchHandler = null;
         
-    private Transport mTransport = Transport.BT_SPP;
+    private Transport mTransport = Transport.BT_GAIA;
     private boolean mIsListening = false;
     private boolean mIsConnected = false;
     private BluetoothServerSocket mListener;
