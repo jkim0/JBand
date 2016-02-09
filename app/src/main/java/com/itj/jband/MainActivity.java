@@ -83,14 +83,6 @@ public class MainActivity extends AppCompatActivity {
                 mPrevPosition = position;
             }
         });
-        mViewPager.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.d(TAG, "onClicked view = " + view);
-                Intent intent = new Intent(MainActivity.this, ActivityDetailActivity.class);
-                startActivity(intent);
-            }
-        });
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
@@ -103,7 +95,9 @@ public class MainActivity extends AppCompatActivity {
                 } else if (id == R.id.nav_user_managements) {
                     targetIntent = new Intent(MainActivity.this, UserManagementActivity.class);
                 } else if (id == R.id.nav_check_activities) {
+                    targetIntent = new Intent(MainActivity.this, ActivityCheckActivity.class);
                 } else if (id == R.id.nav_sleep_managements) {
+                    targetIntent = new Intent(MainActivity.this, SleepManagementActivity.class);
                 } else if (id == R.id.nav_usage_statistics) {
                     targetIntent = new Intent(MainActivity.this, UsageStatisticActivity.class);
                 } else if (id == R.id.nav_device_manage) {
@@ -132,6 +126,13 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 // TODO
                 // enter detail screen
+                if (i == 0) {
+                    Intent targetIntent = new Intent(MainActivity.this, SleepManagementActivity.class);
+                    startActivity(targetIntent);
+                } else if (i == 1) {
+                    Intent targetIntent = new Intent(MainActivity.this, ActivityCheckActivity.class);
+                    startActivity(targetIntent);
+                }
             }
         });
 
@@ -141,11 +142,11 @@ public class MainActivity extends AppCompatActivity {
 
         mBTAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        /*if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_CODE_LOCATION);
         } else {
             initializeBluetooth();
-        }*/
+        }
     }
 
     private void initializeBluetooth() {
@@ -291,17 +292,6 @@ public class MainActivity extends AppCompatActivity {
                 subject.setText("");
                 subject.setVisibility(View.INVISIBLE);
             }
-
-            rootView.setClickable(true);
-            rootView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    Log.d(TAG, "onClicked view = " + view);
-                    Intent intent = new Intent(getActivity(), ActivityDetailActivity.class);
-                    intent.putExtra("type", mId);
-                    startActivity(intent);
-                }
-            });
 
             return rootView;
         }
