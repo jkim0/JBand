@@ -18,22 +18,22 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE " + ProviderContract.Schedule.TABLE_NAME + " ("
-                + ProviderContract.Schedule._ID + " INTEGER PRIMARY KEY,"
-                + ProviderContract.Schedule.COLUMN_SCHEDULE_NAME + " TEXT,"
-                + ProviderContract.Schedule.COLUMN_SCHEDULE_NOTIFICATION + " TEXT,"
-                + ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS + " INTEGER,"
-                + ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR + " INTEGER,"
-                + ProviderContract.Schedule.COLUMN_SCHEDULE_MIN + " INTEGER,"
-                + ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION + " INTEGER DEFAULT 0,"
-                + ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON + " INTEGER DEFAULT 0"
+        db.execSQL("CREATE TABLE " + ProviderContract.ScheduleColumns.TABLE_NAME + " ("
+                + ProviderContract.ScheduleColumns._ID + " INTEGER PRIMARY KEY,"
+                + ProviderContract.ScheduleColumns.COLUMN_SCHEDULE_NAME + " TEXT,"
+                + ProviderContract.ScheduleColumns.COLUMN_SCHEDULE_NOTIFICATION + " TEXT,"
+                + ProviderContract.ScheduleColumns.COLUMN_SCHEDULE_DAYS + " INTEGER,"
+                + ProviderContract.ScheduleColumns.COLUMN_SCHEDULE_HOUR + " INTEGER,"
+                + ProviderContract.ScheduleColumns.COLUMN_SCHEDULE_MIN + " INTEGER,"
+                + ProviderContract.ScheduleColumns.COLUMN_SCHEDULE_REPORT_LOCATION + " INTEGER DEFAULT 0,"
+                + ProviderContract.ScheduleColumns.COLUMN_SCHEDULE_IS_ON + " INTEGER DEFAULT 0"
                 + ");");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + ProviderContract.Steps.TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + ProviderContract.Schedule.TABLE_NAME);
+        db.execSQL("DROP TABLE IF EXISTS " + ProviderContract.StepColumns.TABLE_NAME);
+        db.execSQL("DROP TABLE IF EXISTS " + ProviderContract.ScheduleColumns.TABLE_NAME);
         onCreate(db);
     }
 }

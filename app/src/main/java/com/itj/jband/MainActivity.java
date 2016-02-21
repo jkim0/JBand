@@ -2,6 +2,7 @@ package com.itj.jband;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -46,10 +47,14 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int VIEW_COUNT = 3;
 
-    private static final int REQUEST_ENABLE_BT = 0;
-    private static final int REQUEST_CODE_LOCATION = 1;
+    private static final int REQUEST_ENABLE_BT = 1;
+    private static final int REQUEST_CODE_LOCATION = 2;
+    private static final int REQUSET_DEVICE_SELECT = 3;
+
     private BluetoothAdapter mBTAdapter;
     private Handler mHandler = new Handler();
+
+    private GaiaControlManager mGaiaControlManager = null;
 
     // for test
     private static int mSteps = 0;
@@ -103,8 +108,13 @@ public class MainActivity extends AppCompatActivity {
                 } else if (id == R.id.nav_device_manage) {
                     targetIntent = new Intent(MainActivity.this, DeviceManageActivity.class);
                 }
+
                 if (targetIntent != null) {
-                    startActivity(targetIntent);
+                    if (id == R.id.nav_device_manage) {
+                        startActivityForResult(targetIntent, REQUSET_DEVICE_SELECT);
+                    } else {
+                        startActivity(targetIntent);
+                    }
                 }
 
                 mDrawerLayout.closeDrawer(GravityCompat.START);
@@ -132,13 +142,12 @@ public class MainActivity extends AppCompatActivity {
                 } else if (i == 1) {
                     Intent targetIntent = new Intent(MainActivity.this, ActivityCheckActivity.class);
                     startActivity(targetIntent);
+                } else if (i == 2) {
+                    final boolean inSleep = Utils.getSavedSleepMode(MainActivity.this);
+                    mGaiaControlManager.setSleepMode(!inSleep);
                 }
             }
         });
-
-        Intent serviceIntent = new Intent(this, SensorService.class);
-        serviceIntent.setAction(SensorService.ACTION_START_SENSOR_MONITORING);
-        startService(serviceIntent);
 
         mBTAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -151,8 +160,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void initializeBluetooth() {
         if(mBTAdapter.isEnabled()) {
-            Intent serviceIntent = new Intent(this, GaiaControlService.class);
-            startService(serviceIntent);
+            startGaiaControlService();
         } else {
             mHandler.post(new Runnable() {
                 @Override
@@ -180,13 +188,26 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_ENABLE_BT) {
             if (resultCode == RESULT_OK) {
-                Intent serviceIntent = new Intent(this, GaiaControlService.class);
-                startService(serviceIntent);
+                initializeBluetooth();
             } else {
                 Log.d(TAG, "failed to enable bt.");
                 Toast.makeText(this, "failed to enable bt.", Toast.LENGTH_SHORT).show();
             }
+        } else if (requestCode == REQUSET_DEVICE_SELECT) {
+            if (resultCode == RESULT_OK) {
+                BluetoothDevice device = data.getParcelableExtra("device");
+                mGaiaControlManager.connect(device);
+            }
         }
+    }
+
+    private void startGaiaControlService() {
+        Log.d(TAG, "startGaiaControlService");
+        Intent serviceIntent = new Intent(this, GaiaControlService.class);
+        serviceIntent.setAction(GaiaControlService.ACTION_START_GAIA_SERVICE);
+        startService(serviceIntent);
+
+        mGaiaControlManager = GaiaControlManager.getInstance(this);
     }
 
     private void initPageMark(){
@@ -248,7 +269,6 @@ public class MainActivity extends AppCompatActivity {
          */
         private static final String ARG_SECTION_NUMBER = "section_number";
 
-        private ISenserService mService;
         private int mId = -1;
 
         public PlaceholderFragment() {
@@ -275,10 +295,6 @@ public class MainActivity extends AppCompatActivity {
             TextView measureValue = (TextView) rootView.findViewById(R.id.measured_value);
             TextView additionalInfo = (TextView) rootView.findViewById(R.id.additional_info);
 
-            Intent serviceIntent = new Intent(getActivity(), SensorService.class);
-            serviceIntent.setAction(SensorService.ACTION_START_SENSOR_MONITORING);
-            getActivity().bindService(serviceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
-
             mId = getArguments().getInt(ARG_SECTION_NUMBER, -1);
             if (mId == 1) {
                 subject.setText(getString(R.string.section_title_steps));
@@ -295,67 +311,6 @@ public class MainActivity extends AppCompatActivity {
 
             return rootView;
         }
-
-        @Override
-        public void onDestroyView() {
-            if (mService != null) {
-                try {
-                    mService.unregisterSensorEventListener(mListener);
-                } catch (RemoteException ex) {
-                    ex.printStackTrace();
-                }
-            }
-            getActivity().unbindService(mServiceConnection);
-            super.onDestroyView();
-        }
-
-        private ServiceConnection mServiceConnection = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-                mService = ISenserService.Stub.asInterface(iBinder);
-
-                try {
-                    mService.registerSensorEventListener(mListener);
-                } catch (RemoteException ex) {
-                    ex.printStackTrace();
-                }
-            }
-
-            @Override
-            public void onServiceDisconnected(ComponentName componentName) {
-                mService = null;
-            }
-        };
-
-        private ISensorEventListener mListener = new ISensorEventListener.Stub() {
-            @Override
-            public void onStepDetected() throws RemoteException {
-                if (mId != 1 || getView() == null) return;
-                mSteps++;
-                TextView measureValue = (TextView) getView().findViewById(R.id.measured_value);
-                TextView additionalInfo = (TextView) getView().findViewById(R.id.additional_info);
-                measureValue.setText("" + mSteps);
-                additionalInfo.setText("0m/0cal");
-            }
-
-            @Override
-            public void onStepCountReceived(int count) throws RemoteException {
-                if (mId != 2 || getView() == null) return;
-                TextView measureValue = (TextView) getView().findViewById(R.id.measured_value);
-                TextView additionalInfo = (TextView) getView().findViewById(R.id.additional_info);
-                measureValue.setText("step count = " + count);
-                additionalInfo.setText("0h00m Deep Sleep");
-            }
-
-            @Override
-            public void onAccelerometerDataReceived(float x, float y, float z) throws RemoteException {
-                if (mId != 3 || getView() == null) return;
-                TextView measureValue = (TextView) getView().findViewById(R.id.measured_value);
-                TextView additionalInfo = (TextView) getView().findViewById(R.id.additional_info);
-                measureValue.setText("axis_x = " + x + " axis_y = " + y + " axis_z = " + z);
-                additionalInfo.setText("BMI 0 Average");
-            }
-        };
     }
 
     /**

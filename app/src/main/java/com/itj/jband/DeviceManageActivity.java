@@ -19,24 +19,32 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Set;
 
 public class DeviceManageActivity extends AppCompatActivity {
     private static final String TAG = DeviceManageActivity.class.getSimpleName();
 
-    private ListView mListView;
+    private RecyclerView mListView;
 
     private BluetoothAdapter mBTAdapter;
-    private ArrayAdapter<BluetoothDevice> mAdapter;
+    private DeviceAdapter mAdapter;
 
     private static final int REQUEST_ENABLE_BT = 0;
-    private static final int REQUEST_CODE_LOCATION = 1;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -56,8 +64,11 @@ public class DeviceManageActivity extends AppCompatActivity {
 
         mBTAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        mListView = (ListView)findViewById(R.id.device_list);
-        mAdapter = new ArrayAdapter<BluetoothDevice>(this, android.R.layout.simple_list_item_1, new ArrayList<BluetoothDevice>());
+        mListView = (RecyclerView)findViewById(R.id.device_list);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        mListView.setLayoutManager(layoutManager);
+
+        mAdapter = new DeviceAdapter();
         mListView.setAdapter(mAdapter);
 
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
@@ -68,11 +79,63 @@ public class DeviceManageActivity extends AppCompatActivity {
         if (mBTAdapter == null) {
             return;
         }
+    }
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_CODE_LOCATION);
-        } else {
-            initializeBluetooth();
+    public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.DeviceViewHolder> {
+        private ArrayList<BluetoothDevice> mDeviceList = new ArrayList<>();
+
+        public class DeviceViewHolder extends RecyclerView.ViewHolder {
+            public ImageView mIcon;
+            public TextView mDeviceName;
+
+            public DeviceViewHolder(View itemView) {
+                super(itemView);
+                mIcon = (ImageView)itemView.findViewById(R.id.device_icon);
+                mDeviceName = (TextView)itemView.findViewById(R.id.device_name);
+            }
+        }
+
+        @Override
+        public DeviceViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            // create a new view
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.devcie_list_item, parent, false);
+            DeviceViewHolder vh = new DeviceViewHolder(v);
+            return vh;
+        }
+
+        @Override
+        public void onBindViewHolder(DeviceViewHolder holder, int position) {
+            final BluetoothDevice device = mDeviceList.get(position);
+
+            Log.d(TAG, "onBindViewHolder position = " + position + " address = " + device.getAddress() + " class = " + device.getBluetoothClass().getDeviceClass());
+            holder.mIcon.setImageResource(R.drawable.ic_smartphone_black_24dp);
+            holder.mDeviceName.setText(device.getName());
+
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    onDeviceSelected(device);
+                }
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            return mDeviceList.size();
+        }
+
+        public void addItem(BluetoothDevice device) {
+            String address = device.getAddress();
+
+            if (mDeviceList.contains(device)) {
+                final int index = mDeviceList.indexOf(device);
+                mDeviceList.set(index, device);
+                notifyItemChanged(index);
+            } else {
+                mDeviceList.add(device);
+                final int index = mDeviceList.size();
+                notifyItemInserted(index);
+            }
         }
     }
 
@@ -87,37 +150,6 @@ public class DeviceManageActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void initializeBluetooth() {
-        if(mBTAdapter.isEnabled()) {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    startDiscovery();
-                }
-            });
-        } else {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-                }
-            });
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == REQUEST_CODE_LOCATION) {
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initializeBluetooth();
-            } else {
-                Log.d(TAG, "failed to grant permission.");
-                finish();
-            }
-        }
-    }
-
     private final BroadcastReceiver mBtEventReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -130,14 +162,39 @@ public class DeviceManageActivity extends AppCompatActivity {
                         Log.d(TAG, "device name = " + device + " uuid = " + id.toString());
                     }
                 }
-                mAdapter.add(device);
+                mAdapter.addItem(device);
             }
         }
     };
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        loadConnectedDeviceList();
+        startDiscovery();
+    }
+
+    private void loadConnectedDeviceList() {
+        if (mBTAdapter != null) {
+            Set<BluetoothDevice> devices = mBTAdapter.getBondedDevices();
+            for (BluetoothDevice devcice : devices) {
+                ParcelUuid[] uuids = devcice.getUuids();
+                Log.d(TAG, "device = " + devcice.getName());
+                for (ParcelUuid uuid : uuids) {
+                    Log.d(TAG, "    Supported uuid = " + uuid.toString());
+                }
+                mAdapter.addItem(devcice);
+            }
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         unregisterReceiver(mBtEventReceiver);
+        if (mBTAdapter.isDiscovering()) {
+            mBTAdapter.cancelDiscovery();
+        }
+
         super.onDestroy();
     }
 
@@ -150,15 +207,10 @@ public class DeviceManageActivity extends AppCompatActivity {
         Log.d(TAG, "result = " + result);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_ENABLE_BT) {
-            if (resultCode == RESULT_OK) {
-                startDiscovery();
-            } else {
-                Log.d(TAG, "can not enable bt.");
-                finish();
-            }
-        }
+    private void onDeviceSelected(BluetoothDevice device) {
+        Intent data = new Intent();
+        data.putExtra("device", device);
+        setResult(RESULT_OK, data);
+        finish();
     }
 }

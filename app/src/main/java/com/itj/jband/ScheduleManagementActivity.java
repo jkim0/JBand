@@ -25,6 +25,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.itj.jband.databases.ProviderContract;
+import com.itj.jband.schedule.Schedule;
+import com.itj.jband.schedule.ScheduleManager;
 
 public class ScheduleManagementActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = ScheduleManagementActivity.class.getSimpleName();
@@ -37,6 +39,8 @@ public class ScheduleManagementActivity extends AppCompatActivity implements Loa
     private static final int REQUEST_EDIT_SCHEDULE = 2;
     
     private ScheduleListAdapter mAdapter;
+
+    private ScheduleManager mScheduleManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,8 +70,8 @@ public class ScheduleManagementActivity extends AppCompatActivity implements Loa
             }
         });
 
+        mScheduleManager = ScheduleManager.getInstance(this);
         getSupportLoaderManager().initLoader(SCHEDULE_LIST_LOADER, null, this);
-        //addSchedule(new Schedule("병원 가는 시간", "병원 가!!", new boolean[]{false, false, true, true, true, false, false}, 2, 0, true));
     }
 
     private void startEditActivity(long id) {
@@ -79,23 +83,6 @@ public class ScheduleManagementActivity extends AppCompatActivity implements Loa
         }
         startActivityForResult(intent, requestCode);
     }
-
-    /*@Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode == RESULT_OK) {
-            Schedule schedule = (Schedule)data.getParcelableExtra("schedule");
-            if (requestCode == REQUEST_ADD_SCHEDULE) {
-                addSchedule(schedule);
-            } else if (requestCode == REQUEST_EDIT_SCHEDULE) {
-                boolean deleted = data.getBooleanExtra("deleted", false);
-                if (deleted) {
-                    deleteSchedule(schedule);
-                } else {
-                    updateSchedule(schedule);
-                }
-            }
-        }
-    }*/
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -131,37 +118,14 @@ public class ScheduleManagementActivity extends AppCompatActivity implements Loa
         @Override
         public void bindView(View view, Context context, Cursor cursor) {
             ViewHolder holder = (ViewHolder)view.getTag();
-            int idColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule._ID);
-            int nameColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_NAME);
-            int daysColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS);
-            int hourColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR);
-            int minColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_MIN);
-            int reportLocationColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION);
-            int isOnColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON);
+            final Schedule schedule = new Schedule(cursor);
 
-            String name = cursor.getString(nameColumnIndex);
-            int days = cursor.getInt(daysColumnIndex);
-            int hour = cursor.getInt(hourColumnIndex);
-            int min = cursor.getInt(minColumnIndex);
-            boolean reportLocation = cursor.getInt(reportLocationColumnIndex) == 0 ? false : true;
-            boolean isOn = cursor.getInt(isOnColumnIndex) == 0 ? false : true;
-            final long id = cursor.getLong(idColumnIndex);
+            holder.mName.setText(schedule.mName);
 
-            holder.mSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    ContentValues values = new ContentValues();
-                    values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON, isChecked);
-                    getContentResolver().update(
-                            Uri.withAppendedPath(ProviderContract.Schedule.CONTENT_SCHEDULE_ID_URI_BASE, "" + id),values, null, null);
-                }
-            });
+            holder.mDays.setText(Utils.getDaysStringFromInteger(ScheduleManagementActivity.this, schedule.mWeekdays));
 
-            holder.mName.setText(name);
-
-            holder.mDays.setText(Utils.getDaysStringFromInteger(ScheduleManagementActivity.this, days));
-
-            boolean pm = hour > 12;
+            int hour = schedule.mHour;
+            boolean pm = hour >= 12;
             if (pm) {
                 holder.mAmPm.setText(getString(R.string.pm));
             } else {
@@ -171,9 +135,22 @@ public class ScheduleManagementActivity extends AppCompatActivity implements Loa
                 hour -= 12;
             }
 
-            holder.mTime.setText(String.format(getString(R.string.alarm_time_format), hour, min));
+            holder.mTime.setText(String.format(getString(R.string.alarm_time_format), hour, schedule.mMin));
 
-            holder.mSwitch.setChecked(isOn);
+            holder.mSwitch.setChecked(schedule.mIsOn);
+
+            holder.mSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    schedule.mIsOn = isChecked;
+                    Schedule.updateSchedule(getContentResolver(), schedule);
+                    if (isChecked) {
+                        mScheduleManager.updateSchedule(schedule);
+                    } else {
+                        mScheduleManager.cancelSchedule(schedule);
+                    }
+                }
+            });
         }
     }
 
@@ -188,19 +165,7 @@ public class ScheduleManagementActivity extends AppCompatActivity implements Loa
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        String[] columns = {
-                ProviderContract.Schedule._ID,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_NAME,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_MIN,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON
-        };
-
-        Uri uri = ProviderContract.Schedule.CONTENT_URI;
-
-        return new CursorLoader(this, uri, columns, null, null, ProviderContract.Schedule.DEFAULT_SORT_ORDER);
+        return Schedule.createCursorLoader(this);
     }
 
     @Override

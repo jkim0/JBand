@@ -27,14 +27,14 @@ import android.widget.TextView;
 import android.widget.TimePicker;
 
 import com.itj.jband.databases.ProviderContract;
+import com.itj.jband.schedule.Schedule;
+import com.itj.jband.schedule.ScheduleManager;
 
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 public class ScheduleEditActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = ScheduleEditActivity.class.getSimpleName();;
-
-    private long mScheduleId = -1;
 
     private int mHour = -1;
     private int mMin = -1;
@@ -47,7 +47,9 @@ public class ScheduleEditActivity extends AppCompatActivity implements LoaderMan
 
     private static final int SCHEDULE_LOADER = 1;
 
-    private int mSelectedDays = 0;
+    private Schedule mSchedule = null;
+
+    private ScheduleManager mScheduleManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,7 +72,7 @@ public class ScheduleEditActivity extends AppCompatActivity implements LoaderMan
             @Override
             public void onClick(View v) {
                 DaySelectDialogFragment fragment = new DaySelectDialogFragment();
-                fragment.setSelectedItem(Utils.getBooleanDaysFromInteger(mSelectedDays));
+                fragment.setSelectedItem(Utils.getBooleanDaysFromInteger(mSchedule.mWeekdays));
                 fragment.setItemSelectedListener(new DaySelectDialogFragment.OnItemSelectedListener() {
                     @Override
                     public void onSelectItems(boolean[] items) {
@@ -87,8 +89,8 @@ public class ScheduleEditActivity extends AppCompatActivity implements LoaderMan
             @Override
             public void onClick(View v) {
                 GregorianCalendar calendar = new GregorianCalendar();
-                int hour = mHour < 0 ? calendar.get(Calendar.HOUR_OF_DAY) : mHour;
-                int min = mMin < 0 ? calendar.get(Calendar.MINUTE) : mMin;
+                int hour = mSchedule.mHour < 0 ? calendar.get(Calendar.HOUR_OF_DAY) : mSchedule.mHour;
+                int min = mSchedule.mMin < 0 ? calendar.get(Calendar.MINUTE) : mSchedule.mMin;
                 new TimePickerDialog(ScheduleEditActivity.this, new TimePickerDialog.OnTimeSetListener() {
                     @Override
                     public void onTimeSet(TimePicker timePicker, int hour, int min) {
@@ -100,13 +102,19 @@ public class ScheduleEditActivity extends AppCompatActivity implements LoaderMan
             }
         });
 
+        mScheduleManager = ScheduleManager.getInstance(this);
+
         Intent intent = getIntent();
-        if (intent != null) {
-            mScheduleId = intent.getLongExtra("schedule_id", -1);
-            if (mScheduleId >= 0) {
-                getSupportLoaderManager().initLoader(SCHEDULE_LOADER, null, this);
-            }
+        long id = intent.getLongExtra("schedule_id", Schedule.INVALID_ID);
+
+        if ( id >= 0) {
+            Bundle arg = new Bundle();
+            arg.putLong("schedule_id", id);
+            getSupportLoaderManager().initLoader(SCHEDULE_LOADER, arg, this);
+        } else {
+            mSchedule = new Schedule();
         }
+
     }
 
     @Override
@@ -115,7 +123,7 @@ public class ScheduleEditActivity extends AppCompatActivity implements LoaderMan
         getMenuInflater().inflate(R.menu.menu_schedule_edit, menu);
 
         MenuItem item = menu.findItem(R.id.action_delete);
-        if (mScheduleId < 0) {
+        if (mSchedule != null && mSchedule.mId < 0) {
             item.setVisible(false);
         }
 
@@ -138,35 +146,14 @@ public class ScheduleEditActivity extends AppCompatActivity implements LoaderMan
     }
 
     private void initValues(Cursor cursor) {
-        String selection = ProviderContract.Schedule._ID + " = ?";
-        String[] selectionArgs = { String.valueOf(mScheduleId) };
-
-        String[] columns = {
-                ProviderContract.Schedule._ID,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_NAME,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_MIN,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION,
-        };
-
         if (cursor != null) {
             if (cursor.moveToFirst()) {
-                int nameColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_NAME);
-                int notiColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_NOTIFICATION);
-                int daysColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS);
-                int hourColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR);
-                int minColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_MIN);
-                int reportLocationColumnIndex = cursor.getColumnIndex(ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION);
-
-                mScheduleName.setText(cursor.getString(nameColumnIndex));
-                mScheduleNoti.setText(cursor.getString(notiColumnIndex));
-
-                setDays(cursor.getInt(daysColumnIndex));
-                setTime(cursor.getInt(hourColumnIndex), cursor.getInt(minColumnIndex));
-
-                boolean report = cursor.getInt(reportLocationColumnIndex) == 0 ? false : true;
-                mCheckBoxReport.setChecked(report);
+                mSchedule = new Schedule(cursor);
+                mScheduleName.setText(mSchedule.mName);
+                mScheduleNoti.setText(mSchedule.mNotification);
+                setDays(mSchedule.mWeekdays);
+                setTime(mSchedule.mHour, mSchedule.mMin);
+                mCheckBoxReport.setChecked(mSchedule.mReportLocation);
             }
 
             cursor.close();
@@ -174,14 +161,19 @@ public class ScheduleEditActivity extends AppCompatActivity implements LoaderMan
     }
 
     private void setDays(int dayValue) {
-        mSelectedDays = dayValue;
-        mScheduleDays.setText(Utils.getDaysStringFromInteger(this, dayValue));
+        mSchedule.mWeekdays = dayValue;
+        String weekDayString = Utils.getDaysStringFromInteger(this, dayValue);
+        if (weekDayString != null && weekDayString.length() > 0) {
+            mScheduleDays.setText(weekDayString);
+        } else {
+            mScheduleDays.setText(R.string.label_hint_schedule_day);
+        }
     }
 
     private void setTime(int hour, int min) {
-        mHour = hour;
-        mMin = min;
-        boolean pm = hour > 12;
+        mSchedule.mHour = hour;
+        mSchedule.mMin = min;
+        boolean pm = hour >= 12;
         StringBuilder sb = new StringBuilder();
         if (pm) {
             sb.append(getString(R.string.pm));
@@ -197,31 +189,26 @@ public class ScheduleEditActivity extends AppCompatActivity implements LoaderMan
     }
 
     private void saveSchedule() {
-        String name = mScheduleName.getText().toString();
-        String noti = mScheduleNoti.getText().toString();
-        boolean report = mCheckBoxReport.isChecked();
+        mSchedule.mName = mScheduleName.getText().toString();
+        mSchedule.mNotification = mScheduleNoti.getText().toString();
+        mSchedule.mReportLocation = mCheckBoxReport.isChecked();
 
-        ContentValues values = new ContentValues();
-        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_NAME, name);
-        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_NOTIFICATION, noti);
-        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS, mSelectedDays);
-        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR, mHour);
-        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_MIN, mMin);
-        values.put(ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION, report);
-
-        if (mScheduleId >= 0) {
-            getContentResolver().update(
-                    Uri.withAppendedPath(ProviderContract.Schedule.CONTENT_SCHEDULE_ID_URI_BASE, "" + mScheduleId),
-                    values, null, null);
+        if (mSchedule.mId >= 0) {
+            Schedule.updateSchedule(getContentResolver(), mSchedule);
         } else {
-            getContentResolver().insert(ProviderContract.Schedule.CONTENT_URI, values);
+            Schedule.addSchedule(getContentResolver(), mSchedule);
         }
 
+        if (mSchedule.mIsOn) {
+            mScheduleManager.updateSchedule(mSchedule);
+        }
         finish();
     }
 
     void deleteSchedule() {
-        getContentResolver().delete(ProviderContract.Schedule.CONTENT_URI, ProviderContract.Schedule._ID + " = " + mScheduleId, null);
+        Schedule.deleteSchedule(getContentResolver(), mSchedule);
+
+        mScheduleManager.cancelSchedule(mSchedule);
         finish();
     }
 
@@ -268,20 +255,10 @@ public class ScheduleEditActivity extends AppCompatActivity implements LoaderMan
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        String[] columns = {
-                ProviderContract.Schedule._ID,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_NAME,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_NOTIFICATION,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_DAYS,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_HOUR,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_MIN,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_REPORT_LOCATION,
-                ProviderContract.Schedule.COLUMN_SCHEDULE_IS_ON
-        };
-
-        Uri uri = ProviderContract.Schedule.CONTENT_URI;
-        String selection = ProviderContract.Schedule._ID + " = " + mScheduleId;
-        return new CursorLoader(this, uri, columns, selection, null, ProviderContract.Schedule.DEFAULT_SORT_ORDER);
+        String selection = ProviderContract.ScheduleColumns._ID + " = " + args.getLong("schedule_id");
+        CursorLoader loader = Schedule.createCursorLoader(this);
+        loader.setSelection(selection);
+        return loader;
     }
 
     @Override

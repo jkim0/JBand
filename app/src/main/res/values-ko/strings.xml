@@ -193,6 +193,7 @@
     <string name="label_day_fri">금</string>
     <string name="label_day_sat">토</string>
     <string name="label_every_day">매일</string>
+    <string name="label_day_not_set">설정 없음</string>
 
     <string name="label_day_sunday">일요일</string>
     <string name="label_day_monday">월요일</string>

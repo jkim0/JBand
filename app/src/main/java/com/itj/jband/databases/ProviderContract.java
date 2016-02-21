@@ -8,25 +8,23 @@ import com.itj.jband.ScheduleManagementActivity;
 /**
  * Created by Loyid on 2015-11-29.
  */
-public class ProviderContract {
+public final class ProviderContract {
     public static final String AUTHORITY = "com.itj.jband.provider";
 
     private static final String UNKNOWN = "Unknown";
 
-    public static class JBandBaseColumns implements BaseColumns {
+    private interface JBandBaseColumns extends BaseColumns {
         public static final String SCHEME = "content://";
 
         public static final String DEFAULT_SORT_ORDER = _ID + " ASC"; // ASC or DESC
     }
 
-    public static final class Steps extends  JBandBaseColumns {
-        public Steps() {}
-
+    public interface StepColumns extends  JBandBaseColumns {
         public static final String TABLE_NAME = "steps";
 
-        private static final String PATH_STEPS = "/steps";
+        public static final String PATH_STEPS = "/steps";
 
-        private static final String PATH_STEPS_ID = "/steps/";
+        public static final String PATH_STEPS_ID = "/steps/";
 
         public static final int SETPS_ID_PATH_POSITION = 1;
 
@@ -45,14 +43,12 @@ public class ProviderContract {
         public static final String COLUMN_NAME_STEPS = "steps";
     }
 
-    public static final class Schedule extends JBandBaseColumns {
-        public Schedule() {}
-
+    public interface ScheduleColumns extends JBandBaseColumns {
         public static final String TABLE_NAME = "schedules";
 
-        private static final String PATH_SCHEDULE = "/schedules";
+        public static final String PATH_SCHEDULE = "/schedules";
 
-        private static final String PATH_SCHEDULE_ID = "/schedules/";
+        public static final String PATH_SCHEDULE_ID = "/schedules/";
 
         public static final int SCHEDULE_ID_PATH_POSITION = 1;
 

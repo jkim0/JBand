@@ -193,6 +193,7 @@
     <string name="label_day_fri">Fri</string>
     <string name="label_day_sat">Sat</string>
     <string name="label_every_day">Every day</string>
+    <string name="label_day_not_set">Not set</string>
 
     <string name="label_day_sunday">Sunday</string>
     <string name="label_day_monday">Monday</string>

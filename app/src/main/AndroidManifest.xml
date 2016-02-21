@@ -2,13 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.itj.jband">
 
-    <uses-feature android:name="android.hardware.sensor.stepcounter" />
-    <uses-feature android:name="android.hardware.sensor.stepdetector" />
-    <uses-feature android:name="android.hardware.sensor.accelerometor" />
     <uses-feature
         android:name="android.hardware.camera"
         android:required="true" />
 
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -32,12 +30,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <service
-            android:name=".SensorService"
-            android:enabled="true"
-            android:exported="true" />
-
         <activity
             android:name=".UserManagementActivity"
             android:label="@string/title_activity_user_info_edit"
@@ -90,7 +82,24 @@
         <activity
             android:name=".SleepManagementActivity"
             android:label="@string/title_activity_sleep_management"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <receiver
+            android:name=".receiver.BootCompletedBroadcastListener"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name=".schedule.ScheduleManageService$ScheduleEventReceiver"
+            android:exported="false"/>
+
+        <service
+            android:name=".schedule.ScheduleManageService"
+            android:enabled="true"
+            android:exported="true"></service>
     </application>
 
 </manifest>

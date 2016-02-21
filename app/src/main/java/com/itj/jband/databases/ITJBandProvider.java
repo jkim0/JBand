@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -25,8 +26,8 @@ public class ITJBandProvider extends ContentProvider {
 
     static {
         sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-        sUriMatcher.addURI(ProviderContract.AUTHORITY, ProviderContract.Schedule.TABLE_NAME, SCHEDULE);
-        sUriMatcher.addURI(ProviderContract.AUTHORITY, ProviderContract.Schedule.TABLE_NAME + "/#", SCHEDULE_ID);
+        sUriMatcher.addURI(ProviderContract.AUTHORITY, ProviderContract.ScheduleColumns.TABLE_NAME, SCHEDULE);
+        sUriMatcher.addURI(ProviderContract.AUTHORITY, ProviderContract.ScheduleColumns.TABLE_NAME + "/#", SCHEDULE_ID);
     }
 
     public ITJBandProvider() {
@@ -36,15 +37,19 @@ public class ITJBandProvider extends ContentProvider {
     public int delete(Uri uri, String selection, String[] selectionArgs) {
         Log.d(TAG, "delete uri = " + uri + " selection = " + selection + " selectionArgs = " + getStringFromArray(selectionArgs));
         SQLiteDatabase db = mDatabaseHelper.getWritableDatabase();
+        Log.d(TAG, "delete uri match = " + sUriMatcher.match(uri));
         int count;
         switch (sUriMatcher.match(uri)) {
             case SCHEDULE_ID:
-                String scheduleId = uri.getPathSegments().get(ProviderContract.Schedule.SCHEDULE_ID_PATH_POSITION);
-                if (selection != null) {
-                    selection += " AND " + ProviderContract.Schedule._ID + " = " + scheduleId;
+                String scheduleId = uri.getPathSegments().get(ProviderContract.ScheduleColumns.SCHEDULE_ID_PATH_POSITION);
+                String prependSelection = ProviderContract.ScheduleColumns._ID + " = " + scheduleId;
+                if (TextUtils.isEmpty(selection)) {
+                    selection = prependSelection;
+                } else {
+                    selection = prependSelection + " AND (" + selection + ")";
                 }
             case SCHEDULE:
-                count = db.delete(ProviderContract.Schedule.TABLE_NAME, selection, selectionArgs);
+                count = db.delete(ProviderContract.ScheduleColumns.TABLE_NAME, selection, selectionArgs);
                 break;
             default:
                 throw new UnsupportedOperationException("Invalid URI = " + uri);
@@ -58,9 +63,9 @@ public class ITJBandProvider extends ContentProvider {
     public String getType(Uri uri) {
         switch (sUriMatcher.match(uri)) {
             case SCHEDULE:
-                return ProviderContract.Schedule.CONTENT_TYPE;
+                return ProviderContract.ScheduleColumns.CONTENT_TYPE;
             case SCHEDULE_ID:
-                return ProviderContract.Schedule.CONTENT_ITEM_TYPE;
+                return ProviderContract.ScheduleColumns.CONTENT_ITEM_TYPE;
             default:
                 throw new IllegalArgumentException("Unknown URI = " + uri);
         }
@@ -74,14 +79,14 @@ public class ITJBandProvider extends ContentProvider {
         long rowId;
         switch (sUriMatcher.match(uri)) {
             case SCHEDULE:
-                rowId = db.insert(ProviderContract.Schedule.TABLE_NAME, null, values);
+                rowId = db.insert(ProviderContract.ScheduleColumns.TABLE_NAME, null, values);
                 break;
             default:
                 throw new UnsupportedOperationException("Invalid URI = " + uri);
         }
 
         if (rowId > 0) {
-            Uri scheduleUri = ContentUris.withAppendedId(ProviderContract.Schedule.CONTENT_SCHEDULE_ID_URI_BASE, rowId);
+            Uri scheduleUri = ContentUris.withAppendedId(ProviderContract.ScheduleColumns.CONTENT_SCHEDULE_ID_URI_BASE, rowId);
             if (scheduleUri != null) {
                 getContext().getContentResolver().notifyChange(scheduleUri, null);
                 return scheduleUri;
@@ -115,9 +120,9 @@ public class ITJBandProvider extends ContentProvider {
         switch (sUriMatcher.match(uri)) {
             case SCHEDULE_ID:
                 qb.appendWhere("_id=?");
-                prependArgs.add(uri.getPathSegments().get(ProviderContract.Schedule.SCHEDULE_ID_PATH_POSITION));
+                prependArgs.add(uri.getPathSegments().get(ProviderContract.ScheduleColumns.SCHEDULE_ID_PATH_POSITION));
             case SCHEDULE:
-                qb.setTables(ProviderContract.Schedule.TABLE_NAME);
+                qb.setTables(ProviderContract.ScheduleColumns.TABLE_NAME);
                 break;
             default:
                 throw new IllegalArgumentException("Unknown URI = " + uri);
@@ -141,13 +146,14 @@ public class ITJBandProvider extends ContentProvider {
 
         switch (sUriMatcher.match(uri)) {
             case SCHEDULE_ID:
-                String scheduleId = uri.getPathSegments().get(ProviderContract.Schedule.SCHEDULE_ID_PATH_POSITION);
-                String prependSelection = ProviderContract.Schedule._ID + " = " + scheduleId;
-                if (selection != null) {
-                    selection += " AND " + prependSelection;
-                } else {
+                String scheduleId = uri.getPathSegments().get(ProviderContract.ScheduleColumns.SCHEDULE_ID_PATH_POSITION);
+                String prependSelection = ProviderContract.ScheduleColumns._ID + " = " + scheduleId;
+                if (TextUtils.isEmpty(selection)) {
                     selection = prependSelection;
+                } else {
+                    selection = prependSelection + " AND (" + selection + ")";
                 }
+                break;
             case SCHEDULE:
                 break;
             default:
@@ -155,7 +161,7 @@ public class ITJBandProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = mDatabaseHelper.getWritableDatabase();
-        count = db.update(ProviderContract.Schedule.TABLE_NAME, values, selection, selectionArgs);
+        count = db.update(ProviderContract.ScheduleColumns.TABLE_NAME, values, selection, selectionArgs);
 
         if (count > 0) {
             getContext().getContentResolver().notifyChange(uri, null);

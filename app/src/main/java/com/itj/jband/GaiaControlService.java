@@ -1,40 +1,55 @@
 package com.itj.jband;
 
 import android.app.Service;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.os.ParcelUuid;
+import android.os.RemoteException;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
-import com.csr.gaia.android.library.DataConnectionListener;
-import com.csr.gaia.android.library.Gaia;
-import com.csr.gaia.android.library.Gaia.EventId;
-import com.csr.gaia.android.library.Gaia.Status;
-import com.csr.gaia.android.library.GaiaCommand;
-import com.csr.gaia.android.library.GaiaLink;
+import com.csr.gaia.library.Gaia;
+import com.csr.gaia.library.GaiaError;
+import com.csr.gaia.library.GaiaLink;
+import com.csr.gaia.library.GaiaPacket;
+import com.itj.jband.schedule.ScheduleManageService;
 
-import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.zip.GZIPInputStream;
 
 public class GaiaControlService extends Service {
     private static final String TAG = GaiaControlService.class.getSimpleName();
 
-    public static final String ACTION_START_GAIA_SERVICE = "com.itj.jband.ACTION_START";
-    public static final String ACTION_STOP_GAIA_SERVICE = "com.itj.jband.ACTION_STOP";
+    private static final boolean DEBUG = true;
+    private static final boolean SUPPORT_DIRECT_CONNECTION = false;
+
+    public static final String ACTION_START_GAIA_SERVICE = "com.itj.jband.ACTION_GAIA_START";
+    public static final String ACTION_STOP_GAIA_SERVICE = "com.itj.jband.ACTION_GAIA_STOP";
 
     private ServiceHandler mServiceHandler;
 
     private GaiaLink mGaiaLink;
-    private GaiaCommand mCommand;
+    private GaiaLink.Transport mTransposrt = GaiaLink.Transport.BT_GAIA;
     private boolean mIsConnected;
-    private byte[] mPacketPayloadBuffer;
-
-    private boolean isStorePskey47 = false;
+    private boolean mSleepMode = false;
 
     private Handler mDeviceHandler = new Handler();
+
+    private int mStartId = 0;
+
+    private IBinder mBinder = new GaiaControlServiceProxy(this);
+    private HashMap<IGaiaEventListener, GaiaEventListenerProxy> mEventListeners = new HashMap<>();
 
     // Handler that receives messages from the thread
     private final class ServiceHandler extends Handler {
@@ -43,8 +58,11 @@ public class GaiaControlService extends Service {
         }
         @Override
         public void handleMessage(Message msg) {
-            if (!onHandleIntent((Intent)msg.obj))
+            if (onHandleIntent((Intent)msg.obj)) {
+                mStartId = msg.arg1;
+            } else {
                 stopSelf(msg.arg1);
+            }
         }
     }
 
@@ -62,10 +80,54 @@ public class GaiaControlService extends Service {
 
         // Get the HandlerThread's Looper and use it for our Handler
         mServiceHandler = new ServiceHandler(thread.getLooper());
+
+        mGaiaLink = GaiaLink.getInstance();
+        mGaiaLink.setReceiveHandler(mGaiaReceiveHandler);
+
+        if (SUPPORT_DIRECT_CONNECTION) {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+            registerReceiver(new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    if (device != null) {
+                        for (ParcelUuid uuid : device.getUuids()) {
+                            if (uuid.equals(ParcelUuid.fromString("00001107-D102-11E1-9B23-00025B00A5A5"))) {
+                                Log.d(TAG, "received intent = " + intent.getAction() + " device = " + device.getName()
+                                        + "has Gaia UUID, so try to connect directly.");
+                                connect(device);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }, filter);
+        }
+
+        Intent serviceIntent = new Intent(this, ScheduleManageService.class);
+        startService(serviceIntent);
+    }
+
+    @Override
+    public void onDestroy() {
+        shutDownGaia();
+        super.onDestroy();
+    }
+
+    private void shutDownGaia() {
+        if (mGaiaLink != null) {
+            if (mGaiaLink.isConnected()) {
+                mGaiaLink.disconnect();
+            }
+            mGaiaLink.setReceiveHandler(null);
+            mGaiaLink = null;
+        }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand startId = " + startId);
         Message msg = mServiceHandler.obtainMessage();
         msg.arg1 = startId;
         msg.obj = intent;
@@ -75,8 +137,25 @@ public class GaiaControlService extends Service {
     }
 
     private boolean onHandleIntent(Intent intent) {
-        //startGaia();
-        return false;//true;
+        if (intent == null) {
+            return false;
+        }
+
+        String action = intent.getAction();
+        Log.d(TAG, "onHandleIntent action = " + action);
+        if (action.equals(ACTION_START_GAIA_SERVICE) && mStartId <= 0) {
+            // TODO
+            return true;
+        } else if (action.equals(ACTION_STOP_GAIA_SERVICE)) {
+            // TODO
+            // disconnect already connected bluetooth device and stop service.
+            if (mStartId > 0) {
+                stopSelf(mStartId);
+                mStartId = 0;
+            }
+        }
+
+        return false;
     }
 
     Handler mGaiaReceiveHandler = new Handler() {
@@ -84,35 +163,27 @@ public class GaiaControlService extends Service {
         public void handleMessage(Message msg) {
             Log.d(TAG, "msg.what = " + msg.what + " arg1 = " + msg.arg1 + " arg2 = " + msg.arg2);
             switch (GaiaLink.Message.valueOf(msg.what)) {
-                case DEBUG:
-                    Log.d(TAG, "here");
-                    break;
-                case UNHANDLED:
-                    Log.d(TAG, "what");
-                    handleTheUnhandled(msg);
-                    break;
                 case CONNECTED:
-                    Log.d(TAG, "how");
-                    mIsConnected = true;
-                    handleGaiaConnected();
+                    if (DEBUG)
+                        Log.d(TAG, "CONNECTED");
+                    handleGaiaConnection(true);
                     break;
                 case DISCONNECTED:
-                    Log.d(TAG, "where");
-                    // Disconnect the link locally.
-                    try {
-                        mGaiaLink.disconnect();
-                    } catch (IOException e) {
-                        Log.d(TAG, "Disconnect failed: " + e.getMessage());
-                    } finally {
-                        // Ensure state is correct even if the disconnect failed.
-                        mIsConnected = false;
-                    }
+                    if (DEBUG)
+                        Log.d(TAG, "DISCONNECTED");
+                    handleGaiaConnection(false);
+                    break;
+                case PACKET:
+                    GaiaPacket packet = (GaiaPacket) msg.obj;
+                    handlePackets(packet);
+                    break;
+                case STREAM:;
                     break;
                 case ERROR:
-                    Log.d(TAG, "now");
-                    break;
-                default:
-                    Log.d(TAG, "go");
+                    if (DEBUG)
+                        Log.d(TAG, "ERROR");
+                    GaiaError error = (GaiaError) msg.obj;
+                    handleError(error);
                     break;
             }
         }
@@ -121,22 +192,23 @@ public class GaiaControlService extends Service {
     /**
      * Event handler triggered when the GAIA link connects.
      */
-    private void handleGaiaConnected() {
+    private void handleGaiaConnection(boolean connected) {
         Toast.makeText(this, mGaiaLink.getName() + " connected", Toast.LENGTH_SHORT);
-        mIsConnected = true;
+        mIsConnected = connected;
 
-        mDeviceHandler.removeCallbacks(updateDeviceInfo);
-        mDeviceHandler.postDelayed(updateDeviceInfo, 1000);
-    }
-
-    /**
-     * Get information about the remote device.
-     */
-    private Runnable updateDeviceInfo = new Runnable() {
-        public void run() {
+        if (connected) {
             getDeveiceInfo();
+        } else {
+            // FIXME
+            // do anything else.
         }
-    };
+
+        synchronized (mEventListeners) {
+            for (GaiaEventListenerProxy proxy : mEventListeners.values()) {
+                proxy.onConnectionStateChanged(connected);
+            }
+        }
+    }
 
     /**
      * Send GAIA commands to retrieve information about the remote device.
@@ -145,237 +217,415 @@ public class GaiaControlService extends Service {
         // Send the request commands. If the remote device responds, the values will be received as a GAIA message
         // that will be processed in handleTheUnhandled() to update the local variables holding state about the remote device.
         if (mIsConnected) {
-            try {
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_GET_TTS_LANGUAGE);
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_GET_API_VERSION);
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_GET_CURRENT_RSSI);
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_GET_CURRENT_BATTERY_LEVEL);
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_RETRIEVE_FULL_PS_KEY, 0x02, 0x99); // PSKEY_FEATURE_BLOCK
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_RETRIEVE_FULL_PS_KEY, 0x02, 0x93); // PSKEY_USER_CONFIGURATION_9
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_RETRIEVE_FULL_PS_KEY, 0x02, 0xb9); // PSKEY_FEATURE_BLOCK
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_GET_LED_CONTROL);
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_GET_BOOT_MODE);
-                /*Below code is just for demo, set PSKEY configuration data 47 as initial value
-                 *0x0000 means whole partitions are unused.
-                 */
-                byte[] Pskeydata47 = new byte[4];
-                Pskeydata47[0] = (byte) 0x00;
-                Pskeydata47[1] = (byte) 0x2f;
-                Pskeydata47[2] = (byte) 0x00;
-                Pskeydata47[3] = (byte) 0x00;
-                isStorePskey47 = true;
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_STORE_PS_KEY, Pskeydata47);
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_GET_MOUNTED_PARTITIONS);
-                mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_GET_LED_CONTROL);
+            sendGaiaPacket(Gaia.COMMAND_GET_API_VERSION);
+            sendGaiaPacket(Gaia.COMMAND_GET_LED_CONTROL);
+            sendGaiaPacket(Gaia.COMMAND_GET_CURRENT_RSSI);
+            sendGaiaPacket(Gaia.COMMAND_GET_CURRENT_BATTERY_LEVEL);
+            // TODO
+            // set default sleep mode
+            mSleepMode = Utils.getSavedSleepMode(this);
+            if (mSleepMode) {
+                //sendGaiaPacket(Gaia.COMMAND_SET_SLEEP_MODE);
             }
-            catch (IOException e) {
-                Toast.makeText(this, "Failed to retrieve info from remote device.", Toast.LENGTH_SHORT);
-                Log.d(TAG,"sendCommand failed in getDeviceInfo: " + e.getMessage());
+
+            mGaiaLink.registerNotification(Gaia.EventId.CHARGER_CONNECTION);
+        }
+    }
+
+    private void handleError(GaiaError error) {
+        switch (error.getType()) {
+            case UNSUPPORTED_TRANSPORT:
+                if (DEBUG) {
+                    Log.d(TAG, "handleError::error - Unsupported_transport");
+                }
+                break;
+            case ILLEGAL_ARGUMENT:
+                if (DEBUG) {
+                    Log.d(TAG, "handleERror::error - Illeagal argument.");
+                }
+                break;
+            case DEVICE_UNKNOWN_ADDRESS:
+                if (DEBUG) {
+                    Log.d(TAG, "handleError::error - Unknown device address");
+                }
+                break;
+            case CONNECTION_FAILED:
+                if (DEBUG) {
+                    Log.d(TAG, "handleError::error - Failed to connect");
+                }
+                break;
+            case ALREADY_CONNECTED:
+                if (DEBUG) {
+                    Log.d(TAG, "handleError::error - device is aleady connected");
+                }
+                break;
+            case BLUETOOTH_NOT_SUPPORTED:
+                if (DEBUG) {
+                    Log.d(TAG, "handleError::error - bluetooth is not supported on device");
+                }
+                // This case has already been tested in this activity by extending of ModelActivity.
+                break;
+            case SENDING_FAILED:
+                String message;
+                if (error.getCommand() > 0) {
+                    message = "Send command " + error.getCommand() + " failed";
+
+                }
+                else {
+                    message = "Send command failed";
+                }
+                if (DEBUG)
+                    Log.w(TAG, "handleError::error - " + message + ": " + error.getStringException());
+                break;
+        }
+    }
+
+    /**
+     * To check the status of an acknowledgement packet.
+     *
+     * @param packet
+     *            the packet to check.
+     *
+     * @return true if the status is SUCCESS and the packet is an acknowledgment, false otherwise.
+     */
+    private boolean checkStatus(GaiaPacket packet) {
+        if (!packet.isAcknowledgement()) {
+            return false;
+        }
+
+        Log.d(TAG, "checkStatus() status = " + packet.getStatus().toString());
+        switch (packet.getStatus()) {
+            case SUCCESS:
+                return true;
+            case NOT_SUPPORTED:
+                receivePacketCommandNotSupported(packet);
+                break;
+            case AUTHENTICATING:
+            case INCORRECT_STATE:
+            case INSUFFICIENT_RESOURCES:
+            case INVALID_PARAMETER:
+            case NOT_AUTHENTICATED:
+            default:
+                if (DEBUG)
+                    Log.w(TAG, "Status " + packet.getStatus().toString() + " with the command " + packet.getCommand());
+        }
+        return false;
+    }
+
+    /**
+     * When we received a packet about a command which is not supported by the device.
+     *
+     * @param packet
+     *            the concerned packet.
+     */
+    private void receivePacketCommandNotSupported(GaiaPacket packet) {
+        switch (packet.getCommand()) {
+            case Gaia.COMMAND_GET_CURRENT_BATTERY_LEVEL:
+                if (DEBUG)
+                    Log.w(TAG, "Received \"COMMAND_GET_CURRENT_BATTERY_LEVEL\" not supported.");
+                //mListAdapter.setValue(Information.BATTERY_LEVEL.ordinal(), getString(R.string.info_not_supported));
+                break;
+
+            case Gaia.COMMAND_GET_CURRENT_RSSI:
+                if (DEBUG)
+                    Log.w(TAG, "Received \"COMMAND_GET_CURRENT_RSSI\" not supported.");
+                //mListAdapter.setValue(Information.SIGNAL_LEVEL.ordinal(), getString(R.string.info_not_supported));
+                break;
+
+            case Gaia.COMMAND_GET_API_VERSION:
+                if (DEBUG)
+                    Log.w(TAG, "Received \"COMMAND_GET_API_VERSION\" not supported.");
+                //mListAdapter.setValue(Information.API_VERSION.ordinal(), getString(R.string.info_not_supported));
+                break;
+
+            case Gaia.COMMAND_EVENT_NOTIFICATION:
+                if (DEBUG)
+                    Log.w(TAG, "Received \"COMMAND_EVENT_NOTIFICATION\" not supported.");
+                //mListAdapter.setValue(Information.BATTERY_STATUS.ordinal(), getString(R.string.info_not_supported));
+                break;
+        }
+    }
+
+    /**
+     * Called when we receive a packet about the command COMMAND_GET_LED_CONTROL to manage the application depending on
+     * information from the packet.
+     *
+     * @param packet
+     *            The packet about the received command COMMAND_GET_LED_CONTROL.
+     */
+    private void receiveCurrentLedControl(GaiaPacket packet) {
+        if (checkStatus(packet)) {
+            final boolean ledActivated = packet.getBoolean();
+            if (DEBUG) {
+                Log.d(TAG, "receiveCurrentLedControl activated = " + ledActivated);
             }
         }
     }
 
     /**
-     * Handle a command not handled by GaiaLink.
-     * @param msg The Message object containing the command.
+     * Called when we receive a packet about the command COMMAND_GET_CURRENT_BATTERY_LEVEL to manage the application
+     * depending on information from the packet.
+     *
+     * @param packet
+     *            The packet about the received command COMMAND_GET_CURRENT_BATTERY_LEVEL.
      */
-    private void handleTheUnhandled(Message msg) {
-        Log.d(TAG, "handleTheUnhandled msg = " + msg);
-        mCommand = (GaiaCommand) msg.obj;
-
-        Gaia.Status status = mCommand.getStatus();
-        int command_id = mCommand.getCommand();
-
-        // Handle acks for commands we have sent.
-        if (mCommand.isAcknowledgement()) {
-            if (status == Gaia.Status.SUCCESS) {
-                Log.d(TAG, Integer.toHexString(mCommand.getVendorId()) + ":" + Integer.toHexString(mCommand.getCommandId()) + " = " + mCommand.getPayload().length);
-
-                // Act on an acknowledgement
-                switch (command_id) {
-                    case Gaia.COMMAND_DEVICE_RESET:
-                        try {
-                            if (mIsConnected) {
-                                //isRebootDevice = true;
-                                mGaiaLink.disconnect();
-                                Toast.makeText(this, "Device reboot started, will reconnect it in 6 seconds", Toast.LENGTH_SHORT).show();
-                                mIsConnected = false;
-                            }
-                        }
-                        catch (IOException e) {
-                            Log.d(TAG, "Disconnect failed: " + e.getMessage());
-                        }
-                        break;
-
-                    case Gaia.COMMAND_GET_BOOT_MODE:
-                        int bootmode = 0;
-                        if (mCommand.getByte(0) == 0x00) {
-                            bootmode = mCommand.getByte(1);
-                        }
-                        Log.d(TAG, "get boot mode = " + bootmode);
-                        break;
-
-                    case Gaia.COMMAND_GET_STORAGE_PARTITION_STATUS:
-                        Log.d(TAG, "get starage partition status");
-                        break;
-
-                    case Gaia.COMMAND_OPEN_STORAGE_PARTITION:
-                        Log.d(TAG, "open storage partition");
-                        break;
-
-                    case Gaia.COMMAND_WRITE_STORAGE_PARTITION:
-                        Log.d(TAG, "write storage partition");
-                        break;
-
-                    case Gaia.COMMAND_CLOSE_STORAGE_PARTITION:
-                        Log.d(TAG, "close storage partition");
-                        break;
-
-                    case Gaia.COMMAND_RETRIEVE_FULL_PS_KEY:
-                        Log.d(TAG, "retireve full ps key");
-                        break;
-
-                    case Gaia.COMMAND_GET_MOUNTED_PARTITIONS:
-                        Log.d(TAG, "get mounted partitions");
-                        break;
-                    case Gaia.COMMAND_GET_CURRENT_BATTERY_LEVEL:
-                        Log.d(TAG, "get current battery level");
-                        break;
-                    case Gaia.COMMAND_GET_API_VERSION: {
-                        String apiVersion = "null";
-                        if (mCommand.getByte(0) == 0x00) {
-                            apiVersion = "" + mCommand.getByte(1) + "." + mCommand.getByte(2) + "." + mCommand.getByte(3);
-                        }
-                        Log.d(TAG, "get api version = " + apiVersion);
-                    }
-                    break;
-                    case Gaia.COMMAND_GET_CURRENT_RSSI:
-                        int rssi = 0;
-                        if (mCommand.getByte(0) == 0x00) {
-                            rssi = mCommand.getByte(1);
-                        }
-                        Log.d(TAG, "get current rssi = " + rssi);
-                        break;
-                    case Gaia.COMMAND_GET_APPLICATION_VERSION: {
-                        String applicationVersion = "";
-                        if (mCommand.getByte(0) == 0x00) {
-                            for (Byte data : mCommand.getPayload()) {
-                                String temp = Gaia.hexb(data);
-                                applicationVersion += "" + Integer.valueOf(temp, 16).intValue();
-                            }
-                        }
-                        Log.d(TAG, "get application version = " + applicationVersion);
-                    }
-                    break;
-                    case Gaia.COMMAND_SET_TTS_LANGUAGE:
-                        Log.d(TAG, "set tts language");
-                        break;
-                    case Gaia.COMMAND_MOUNT_STORAGE_PARTITION:
-                        Log.d(TAG, "mount storage partition");
-                        break;
-                    case Gaia.COMMAND_GET_TTS_LANGUAGE:
-                        Log.d(TAG, "get tts language");
-                        break;
-                    case Gaia.COMMAND_SET_LED_CONTROL:
-                        Log.d(TAG, "set led control");
-                        break;
-                    case Gaia.COMMAND_GET_LED_CONTROL:
-                        Log.d(TAG, "get led control");
-                        if (mCommand.getByte(0) == 0x00) {
-                            Log.d(TAG, "Get LED successfully");
-                            boolean isOn = false;
-                            if (mCommand.getByte(1) == 0x01)
-                                isOn = true;
-
-                            Log.d(TAG, "get ledControl ret = " + isOn);
-                            if (!isOn) {
-                                try {
-                                    mGaiaLink.setLEDControl(true);
-                                } catch (IOException ex) {
-                                    Log.d(TAG, "Exception ex = " + ex);
-                                }
-                            }
-                        }
-                        break;
-                    case Gaia.COMMAND_STORE_PS_KEY:
-                        Log.d(TAG, "store ps key");
-                        break;
-                    case Gaia.COMMAND_REGISTER_NOTIFICATION:
-                        Log.d(TAG, "Register notification successfully");
-                        break;
-                }
+    private void receiveCurrentBatteryLevel(GaiaPacket packet) {
+        if (checkStatus(packet)) {
+            final int level = Utils.extractIntField(packet.getPayload(), 1, 2, false);
+            if (DEBUG) {
+                Log.d(TAG, "receiveGetGurrentBatteryLevel lebel = " + level);
             }
-            else {
-                // Acknowledgement received with non-success result code,
-                // so display the friendly message as a toast and dismiss any dialogs.
-                Toast.makeText(this, "Error from remote device: command_id=" + command_id + ",status=" + Gaia.statusText(status), Toast.LENGTH_SHORT).show();
-            }
+            // we need to retrieve this information constantly
+            //mHandler.postDelayed(mRunnableBattery, WAITING_TIME);
         }
-        else if (command_id == Gaia.COMMAND_EVENT_NOTIFICATION) {
-            EventId event_id = mCommand.getEventId();
-            Log.d(TAG, "Event " + event_id.toString());
+    }
 
-            switch (event_id) {
-                case CHARGER_CONNECTION:
-                    if (mCommand.getBoolean())
-                        Toast.makeText(this, "Charger connected", Toast.LENGTH_SHORT).show();
-                    else
-                        Toast.makeText(this, "Charger disconnected", Toast.LENGTH_SHORT).show();
-                    break;
+    /**
+     * Called when we receive a packet about the command COMMAND_GET_CURRENT_RSSI to manage the application depending on
+     * information from the packet.
+     *
+     * @param packet
+     *            The packet about the received command COMMAND_GET_CURRENT_RSSI.
+     */
+    private void receiveCurrentRSSI(GaiaPacket packet) {
+        if (checkStatus(packet)) {
+            final int level = packet.getByte(1);
+            if (DEBUG) {
+                Log.d(TAG, "receiveCurrentRSSI rssiLevel = " + level);
+            }
+            // we need to retrieve this information constantly
+            //mHandler.postDelayed(mRunnableRSSI, WAITING_TIME);
+        }
+    }
 
-                case USER_ACTION:
-                    int user_action = mCommand.getShort(1);
-                    Log.d(TAG, String.format("HS Event 0x%04X --> %s", user_action, user_action));
-                    break;
-                case AV_COMMAND:
-                    Log.d(TAG, "AV command : " + new String(mCommand.getPayload()));
-                    break;
-                case DEVICE_STATE_CHANGED:
-                    Log.d(TAG, "current state : " + new String(mCommand.getPayload()));
-                    break;
-                case DEBUG_MESSAGE:
-                    Log.d(TAG, "DEBUG_MESSAGE : " + new String(mCommand.getPayload()));
-                    break;
-                case KEY:
-                    Log.d(TAG, "Key Event " + event_id.toString());
-                    break;
-                default:
-                    Log.d(TAG, "Event " + event_id.toString());
-                    break;
+    /**
+     * Called when we receive a packet about the command COMMAND_GET_CURRENT_RSSI to manage the application depending on
+     * information from the packet.
+     *
+     * @param packet
+     *            The packet about the received command COMMAND_GET_CURRENT_RSSI.
+     */
+    private void receiveApiVersion(GaiaPacket packet) {
+        if (checkStatus(packet)) {
+            final String apiVersion = packet.getByte(1) + "." + packet.getByte(2) + "." + packet.getByte(3);
+            if (DEBUG) {
+                Log.d(TAG, "receiveApiVersion version = " + apiVersion);
             }
         }
     }
 
-    private void startGaia() {
-        mGaiaLink = new GaiaLink();
-
-        try {
-            //mGaiaLink.listen();
-            mGaiaLink.connect("00:02:5B:00:FF:03");
-        } catch (IOException ex) {
-            Log.d(TAG, "Ex = ", ex);
+    /**
+     * To handle notifications coming from the Gaia device.
+     */
+    private void handleNotification(GaiaPacket packet) {
+        Gaia.EventId event = packet.getEvent();
+        switch (event) {
+            case CHARGER_CONNECTION:
+                byte[] payload = packet.getPayload();
+                boolean inCharge = false;
+                if (payload != null && payload.length > 0) {
+                    inCharge = payload[1] == 0x01;
+                }
+                if (DEBUG)
+                    Log.d(TAG, "handleNotification::CHARGER_CONNECTION in charge ? " + inCharge);
+                break;
+            default:
+                if (DEBUG)
+                    Log.i(TAG, "Received event: " + event);
         }
+    }
 
-        mGaiaLink.setReceiveHandler(mGaiaReceiveHandler);
+    /**
+     * To manage packets from Gaia device which are "PACKET" directly by the library.
+     *
+     * @param packet
+     *            The message coming from the handler which calls this method.
+     */
+    private void handlePackets(GaiaPacket packet) {
+        boolean validate;
+        switch (packet.getCommand()) {
+            case Gaia.COMMAND_GET_LED_CONTROL:
+                validate = checkStatus(packet);
+                if (DEBUG)
+                    Log.i(TAG, "Received \"COMMAND_GET_LED_CONTROL\" packet with a " + validate + " status.");
+                receiveCurrentLedControl(packet);
+                break;
+            case Gaia.COMMAND_GET_CURRENT_BATTERY_LEVEL:
+                validate = checkStatus(packet);
+                if (DEBUG)
+                    Log.i(TAG, "Received \"COMMAND_GET_CURRENT_BATTERY_LEVEL\" packet with a " + validate + " status.");
+                receiveCurrentBatteryLevel(packet);
+                break;
 
-        // Listener that allows the GaiaLink to update this Activity to indicate when data is being sent or received.
-        mGaiaLink.setDataConnectionListener(new DataConnectionListener() {
-            /**
-             * This will be called when data starts or stops being sent or received on the GaiaLink.
-             * @param isDataTransferInProgress True if data is being sent or received on the link.
-             */
-            public void update(boolean isDataTransferInProgress) {
-                Log.d(TAG, "DataConnectionListener::update isDataTransferInProgress = " + isDataTransferInProgress);
-            }
-        });
+            case Gaia.COMMAND_GET_CURRENT_RSSI:
+                validate = checkStatus(packet);
+                if (DEBUG)
+                    Log.i(TAG, "Received \"COMMAND_GET_CURRENT_RSSI\" packet with a " + validate + " status.");
+                receiveCurrentRSSI(packet);
+                break;
 
-        // Allocate the buffer for building packets to be sent over the air.
-        mPacketPayloadBuffer = new byte[GaiaLink.MAX_PACKET_PAYLOAD];
+            case Gaia.COMMAND_GET_API_VERSION:
+                validate = checkStatus(packet);
+                if (DEBUG)
+                    Log.i(TAG, "Received \"COMMAND_GET_API_VERSION\" packet with a " + validate + " status.");
+                receiveApiVersion(packet);
+                break;
+
+            case Gaia.COMMAND_EVENT_NOTIFICATION:
+                if (DEBUG)
+                    Log.i(TAG, "Received \"Notification\" packet.");
+                handleNotification(packet);
+                break;
+
+            case Gaia.COMMAND_SET_SLEEP_MODE:
+                validate = checkStatus(packet);
+                if (DEBUG) {
+                    Log.d(TAG, "Received \"COMMAND_SET_SLEEP_MODE\" packet with a " + validate + " status.");
+                }
+                break;
+
+            default:
+                if (DEBUG)
+                    Log.d(TAG, "Received packet - command: " + Utils.getIntToHexadecimal(packet.getCommandId())
+                            + " - payload: " + Utils.getStringFromBytes(packet.getPayload()));
+        }
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        // TODO: Return the communication channel to the service.
-        throw new UnsupportedOperationException("Not yet implemented");
+        return mBinder;
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        Log.d(TAG, "onUnbind");
+        return super.onUnbind(intent);
+    }
+
+    private class GaiaControlServiceProxy extends IGaiaControlService.Stub {
+        private WeakReference<GaiaControlService> mService;
+
+        public GaiaControlServiceProxy(GaiaControlService service) {
+            mService = new WeakReference<GaiaControlService>(service);
+        }
+
+        @Override
+        public void connect(BluetoothDevice device) throws RemoteException {
+            mService.get().connect(device);
+        }
+
+        @Override
+        public void disconnect() throws RemoteException {
+            mService.get().disconnect();
+        }
+
+        @Override
+        public boolean isConnected() throws RemoteException {
+            return mService.get().isConnected();
+        }
+
+        @Override
+        public void setSleepMode(boolean mode) throws RemoteException {
+            mService.get().setSleepMode(mode);
+        }
+
+        @Override
+        public void registerEventListener(IGaiaEventListener listener) throws RemoteException {
+            mService.get().registerEventListener(listener);
+        }
+
+        @Override
+        public void unregisterEventListener(IGaiaEventListener listener) throws RemoteException {
+            mService.get().unregisterEventListener(listener);
+        }
+    }
+
+    private void connect(BluetoothDevice device) {
+        Log.d(TAG, "connect device = " + device.toString() + " name = " + device.getName());
+        if (mGaiaLink.isConnected()) {
+            Log.d(TAG, "Gaia link is aleady connected so disconnect first.");
+            mGaiaLink.disconnect();
+        }
+
+        mGaiaLink.connect(device, mTransposrt);
+    }
+
+    private void disconnect() {
+        Log.d(TAG, "disconnect aleady connected = " + mGaiaLink.isConnected());
+        mGaiaLink.disconnect();
+    }
+
+    private boolean isConnected() {
+        return mGaiaLink.isConnected();
+    }
+
+    private void setSleepMode(boolean mode) {
+        Log.d(TAG, "setSleepMode mode = " + mode + " oldMode = " + mSleepMode);
+        // TODO
+        // send sleep command to device
+        if (mSleepMode == mode) {
+            Log.d(TAG, "igore this request because requested mode is same with oldMode.");
+            return;
+        }
+
+        mSleepMode = mode;
+        Utils.saveSleepMode(this, mode);
+        sendGaiaPacket(Gaia.COMMAND_SET_SLEEP_MODE);
+    }
+
+    private void registerEventListener(IGaiaEventListener listener) {
+        synchronized (mEventListeners) {
+            if (mEventListeners.containsKey(listener)) {
+                throw new IllegalStateException("listener is already registered.");
+            }
+
+            GaiaEventListenerProxy proxy = new GaiaEventListenerProxy(listener);
+            mEventListeners.put(listener, proxy);
+        }
+    }
+
+    private void unregisterEventListener(IGaiaEventListener listener) {
+        synchronized (mEventListeners) {
+            if (mEventListeners.containsKey(listener)) {
+                mEventListeners.remove(listener);
+            } else {
+                throw new IllegalStateException("there is no registered listener.");
+            }
+        }
+    }
+
+    private class GaiaEventListenerProxy implements IGaiaEventListener.Stub.DeathRecipient {
+        private IGaiaEventListener mListener;
+
+        public GaiaEventListenerProxy(IGaiaEventListener listener) {
+            mListener = listener;
+        }
+
+        @Override
+        public void binderDied() {
+            synchronized (mEventListeners) {
+                mEventListeners.remove(mListener);
+            }
+        }
+
+        private void onConnectionStateChanged(boolean state) {
+            try {
+                mListener.onConnectionStateChanged(state);
+            } catch (RemoteException ex) {
+                Log.d(TAG, "failed to notify changed connection state.");
+            }
+        }
+    }
+
+    /**
+     * To send a packet to the device.
+     *
+     * @param command
+     *            the command to send to the device.
+     * @param payload
+     *            the additional information for the command.
+     */
+    private void sendGaiaPacket(int command, int... payload) {
+        mGaiaLink.sendCommand(Gaia.VENDOR_CSR, command, payload);
     }
 }
