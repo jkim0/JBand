@@ -5,4 +5,5 @@ package com.itj.jband;
 
 interface IGaiaEventListener {
     void onConnectionStateChanged(boolean state);
+    void onLog(String message);
 }

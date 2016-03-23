@@ -205,6 +205,7 @@ public class Gaia {
 
     // added by loyid Kim
     public static final int COMMAND_SET_SLEEP_MODE = 0x07A1;
+    public static final int COMMAND_REQ_BT_STATUS = 0x07F1;
 
     // Notification commands 0x40nn
     public static final int COMMAND_REGISTER_NOTIFICATION = 0x4001;

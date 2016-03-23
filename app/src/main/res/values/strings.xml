@@ -11,6 +11,7 @@
     <string name="action_device_manage">Device Manage</string>
     <string name="action_delete">Delete</string>
     <string name="action_edit">Edit</string>
+    <string name="action_debug">Debug</string>
 
     <string name="prefix_step_counter">Step Count - </string>
     <string name="prefix_step_dector">Step Detect - </string>
@@ -233,8 +234,21 @@
     <string name="label_section_week">Week</string>
     <string name="label_section_month">Month</string>
 
-
     <string name="label_partition_temp_day">2016.02.15</string>
     <string name="label_estimation_temp_hour">Sleep goal : 7 hour</string>
     <string name="label_estimation_temp_rate">Achieved rate : 120 %</string>
+
+    <string name="label_debug_vendor_id">VendorId</string>
+    <string name="label_debug_command_id">CommandId</string>
+    <string name="label_debug_type">Value Type</string>
+    <string name="label_debug_value">Value</string>
+    <string name="label_debug_button_send">Send</string>
+    <string name="label_debug_button_clear">Clear Log</string>
+    <string name="label_debug_type_bool">Boolean</string>
+    <string name="label_debug_type_int">Integer</string>
+    <string name="label_debug_type_string">String</string>
+    <string name="debug_value_prefix">0x</string>
+    <string name="label_debug_boolean_true">true</string>
+    <string name="label_debug_boolean_false">false</string>
+
 </resources>

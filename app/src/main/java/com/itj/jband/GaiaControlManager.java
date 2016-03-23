@@ -117,6 +117,18 @@ public class GaiaControlManager {
         }
     }
 
+    public void sendCommand(int vendorId, int commandId, byte[] payload) {
+        if (mService == null) {
+            Log.d(TAG, "failed to call setSleepMode() - service is not connected.");
+        }
+
+        try {
+            mService.sendCommand(vendorId, commandId, payload);
+        } catch (RemoteException ex) {
+            Log.e(TAG, "failed to call setSleepMode().", ex);
+        }
+    }
+
     public void registerEventListener(GaiaEventListener listener) {
         if (mService == null) {
             Log.d(TAG, "failed to call registerEventListener() - service is not connected.");
@@ -141,8 +153,11 @@ public class GaiaControlManager {
         }
     }
 
-    public abstract class GaiaEventListener extends IGaiaEventListener.Stub {
+    public static abstract class GaiaEventListener extends IGaiaEventListener.Stub {
         @Override
         public abstract void onConnectionStateChanged(boolean state) throws RemoteException;
+
+        @Override
+        public abstract void onLog(String message) throws RemoteException;
     }
 }

@@ -117,6 +117,14 @@ public class DeviceManageActivity extends AppCompatActivity {
                     onDeviceSelected(device);
                 }
             });
+
+            holder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    onDeviceLongClicked(device);
+                    return false;
+                }
+            });
         }
 
         @Override
@@ -181,7 +189,7 @@ public class DeviceManageActivity extends AppCompatActivity {
                 ParcelUuid[] uuids = devcice.getUuids();
                 Log.d(TAG, "device = " + devcice.getName());
                 for (ParcelUuid uuid : uuids) {
-                    Log.d(TAG, "    Supported uuid = " + uuid.toString());
+                    Log.d(TAG, "    Supported uuid = " + uuid.toString() + " uuidStr = " + uuid.getUuid());
                 }
                 mAdapter.addItem(devcice);
             }
@@ -208,9 +216,22 @@ public class DeviceManageActivity extends AppCompatActivity {
     }
 
     private void onDeviceSelected(BluetoothDevice device) {
+        if (mBTAdapter.isDiscovering()) {
+            mBTAdapter.cancelDiscovery();
+        }
         Intent data = new Intent();
         data.putExtra("device", device);
         setResult(RESULT_OK, data);
         finish();
+    }
+
+    private void onDeviceLongClicked(BluetoothDevice device) {
+        if (mBTAdapter.isDiscovering()) {
+            mBTAdapter.cancelDiscovery();
+        }
+        Intent intent = new Intent(this, GaiaDebugActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra("device", device);
+        startActivity(intent);
     }
 }

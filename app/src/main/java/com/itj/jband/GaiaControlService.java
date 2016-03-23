@@ -7,6 +7,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -14,6 +16,9 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.ParcelUuid;
 import android.os.RemoteException;
+import android.provider.Telephony;
+import android.telephony.SmsMessage;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -26,6 +31,7 @@ import com.itj.jband.schedule.ScheduleManageService;
 
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.zip.GZIPInputStream;
 
 public class GaiaControlService extends Service {
@@ -83,6 +89,7 @@ public class GaiaControlService extends Service {
 
         mGaiaLink = GaiaLink.getInstance();
         mGaiaLink.setReceiveHandler(mGaiaReceiveHandler);
+        mGaiaLink.setLogHandler(mGaiaReceiveHandler);
 
         if (SUPPORT_DIRECT_CONNECTION) {
             IntentFilter filter = new IntentFilter();
@@ -105,13 +112,39 @@ public class GaiaControlService extends Service {
             }, filter);
         }
 
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_UUID);
+        filter.addAction(Telephony.Sms.Intents.SMS_RECEIVED_ACTION);
+        registerReceiver(mBroadcastReceiver, filter);
+
         Intent serviceIntent = new Intent(this, ScheduleManageService.class);
         startService(serviceIntent);
     }
 
+    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action.equals(BluetoothDevice.ACTION_UUID)) {
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                String uuidStr = intent.getStringExtra(BluetoothDevice.EXTRA_UUID);
+                Log.d(TAG, "device name = " + device.getName() + " uuid = " + uuidStr);
+                ParcelUuid[] uuids = device.getUuids();
+                if (uuids != null) {
+                    for (ParcelUuid uuid : uuids) {
+                        Log.d(TAG, "uuid2 = " + uuid + " uuid = " + uuid.getUuid());
+                    }
+                }
+            } else if (action.equals(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)) {
+                onSmsReceived(intent);
+            }
+        }
+    };
+
     @Override
     public void onDestroy() {
         shutDownGaia();
+        unregisterReceiver(mBroadcastReceiver);
         super.onDestroy();
     }
 
@@ -158,7 +191,7 @@ public class GaiaControlService extends Service {
         return false;
     }
 
-    Handler mGaiaReceiveHandler = new Handler() {
+    private Handler mGaiaReceiveHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             Log.d(TAG, "msg.what = " + msg.what + " arg1 = " + msg.arg1 + " arg2 = " + msg.arg2);
@@ -185,9 +218,20 @@ public class GaiaControlService extends Service {
                     GaiaError error = (GaiaError) msg.obj;
                     handleError(error);
                     break;
+                case DEBUG:
+                    handleLog((String)msg.obj);
+                    break;
             }
         }
     };
+
+    private void handleLog(String message) {
+        synchronized (mEventListeners) {
+            for (GaiaEventListenerProxy proxy : mEventListeners.values()) {
+                proxy.onLog(message);
+            }
+        }
+    }
 
     /**
      * Event handler triggered when the GAIA link connects.
@@ -221,6 +265,7 @@ public class GaiaControlService extends Service {
             sendGaiaPacket(Gaia.COMMAND_GET_LED_CONTROL);
             sendGaiaPacket(Gaia.COMMAND_GET_CURRENT_RSSI);
             sendGaiaPacket(Gaia.COMMAND_GET_CURRENT_BATTERY_LEVEL);
+            //mGaiaLink.sendCommand(Gaia.VENDOR_CSR, Gaia.COMMAND_REQ_BT_STATUS, true);
             // TODO
             // set default sleep mode
             mSleepMode = Utils.getSavedSleepMode(this);
@@ -530,6 +575,11 @@ public class GaiaControlService extends Service {
         }
 
         @Override
+        public void sendCommand(int vendorId, int commandId, byte[] payload) {
+            mService.get().sendCommand(vendorId, commandId, payload);
+        }
+
+        @Override
         public void registerEventListener(IGaiaEventListener listener) throws RemoteException {
             mService.get().registerEventListener(listener);
         }
@@ -543,9 +593,24 @@ public class GaiaControlService extends Service {
     private void connect(BluetoothDevice device) {
         Log.d(TAG, "connect device = " + device.toString() + " name = " + device.getName());
         if (mGaiaLink.isConnected()) {
-            Log.d(TAG, "Gaia link is aleady connected so disconnect first.");
-            mGaiaLink.disconnect();
+            if (mGaiaLink.getBluetoothDevice().equals(device)) {
+                Log.d(TAG, "Gaia link is aleady connected so ignore.");
+                return;
+            } else {
+                Log.d(TAG, "Gaia link is aleady connected so disconnect first.");
+                mGaiaLink.disconnect();
+            }
         }
+
+        if (device != null && device.getUuids() != null) {
+            for (ParcelUuid id : device.getUuids()) {
+                Log.d(TAG, "device name = " + device + " uuid = " + id.toString());
+            }
+        }/* else if (device.getUuids() == null) {
+            Log.d(TAG, "device has not uuids so request uuids before connect");
+            device.fetchUuidsWithSdp();
+            return;
+        }*/
 
         mGaiaLink.connect(device, mTransposrt);
     }
@@ -571,6 +636,11 @@ public class GaiaControlService extends Service {
         mSleepMode = mode;
         Utils.saveSleepMode(this, mode);
         sendGaiaPacket(Gaia.COMMAND_SET_SLEEP_MODE);
+    }
+
+    private void sendCommand(int vendorId, int commandId, byte[] payload) {
+        Log.d(TAG, "sendCommand vendorId = " + vendorId + " commandId = " + commandId);
+        mGaiaLink.sendCommand(vendorId, commandId, payload);
     }
 
     private void registerEventListener(IGaiaEventListener listener) {
@@ -615,6 +685,14 @@ public class GaiaControlService extends Service {
                 Log.d(TAG, "failed to notify changed connection state.");
             }
         }
+
+        private void onLog(String message) {
+            try {
+                mListener.onLog(message);
+            } catch (RemoteException ex) {
+                Log.d(TAG, "failed to notify log.");
+            }
+        }
     }
 
     /**
@@ -627,5 +705,46 @@ public class GaiaControlService extends Service {
      */
     private void sendGaiaPacket(int command, int... payload) {
         mGaiaLink.sendCommand(Gaia.VENDOR_CSR, command, payload);
+    }
+
+    private void onSmsReceived(Intent intent) {
+        if (DEBUG) {
+            Log.d(TAG, "onSmsReceived");
+        }
+        Bundle data = intent.getExtras();
+        if (data == null) {
+            Log.d(TAG, "ignore this cause extra data is null");
+            return;
+        }
+
+        Object[] pdus = (Object[])data.get("pdus");
+        if (pdus == null ) {
+            Log.d(TAG, "ignore this cause pdu data is null");
+            return;
+        }
+
+        String format = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            format = data.getString("format");
+        }
+
+        String smsMessage = "";
+        String smsFrom = null;
+        for (int i = 0; i < pdus.length; i++) {
+            SmsMessage message;
+            if (TextUtils.isEmpty(format)) {
+                message = SmsMessage.createFromPdu((byte[]) pdus[i]);
+            } else {
+                message = SmsMessage.createFromPdu((byte[]) pdus[i], format);
+            }
+
+            if (smsFrom == null) {
+                smsFrom = message.getOriginatingAddress();
+            }
+
+            smsMessage += message.getMessageBody();
+        }
+
+        Log.d(TAG, "sms message received : from : " + smsFrom + ", message : " + smsMessage);
     }
 }

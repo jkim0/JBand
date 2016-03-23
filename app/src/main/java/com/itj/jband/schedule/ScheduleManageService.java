@@ -112,7 +112,7 @@ public class ScheduleManageService extends Service {
 
         if (mStartId <= 0) {
             updateSchedules();
-        } else if (action.equals(ACTION_UPDATE_SCHEDULE)) {
+        } else if (action != null && action.equals(ACTION_UPDATE_SCHEDULE)) {
             Schedule schedule = intent.getParcelableExtra(EXTRA_SCHEDULE);
             updateSchedule(schedule);
         }

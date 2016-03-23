@@ -37,4 +37,15 @@
         <item>@string/label_section_week</item>
         <item>@string/label_section_month</item>
     </string-array>
+
+    <string-array name="debug_types">
+        <item>@string/label_debug_type_bool</item>
+        <item>@string/label_debug_type_int</item>
+        <item>@string/label_debug_type_string</item>
+    </string-array>
+
+    <string-array name="debug_bool_values">
+        <item>@string/label_debug_boolean_true</item>
+        <item>@string/label_debug_boolean_false</item>
+    </string-array>
 </resources>

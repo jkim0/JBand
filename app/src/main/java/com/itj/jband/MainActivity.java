@@ -7,7 +7,11 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -19,9 +23,11 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -35,6 +41,11 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.itj.jband.schedule.Schedule;
+
+import java.io.File;
+import java.util.ArrayList;
+
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
     private ListView mListView;
@@ -43,12 +54,15 @@ public class MainActivity extends AppCompatActivity {
     private ViewPager mViewPager;
     private DrawerLayout mDrawerLayout;
     private LinearLayout mPageMark;
+    private TextView mUserName;
+    private TextView mUserInfo;
+    private ImageView mUserPhoto;
     private int mPrevPosition;
 
     private static final int VIEW_COUNT = 3;
 
     private static final int REQUEST_ENABLE_BT = 1;
-    private static final int REQUEST_CODE_LOCATION = 2;
+    private static final int REQUEST_CODE_PERMISSION = 2;
     private static final int REQUSET_DEVICE_SELECT = 3;
 
     private BluetoothAdapter mBTAdapter;
@@ -122,6 +136,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        View headerView = navigationView.getHeaderView(0);
+        mUserName = (TextView)headerView.findViewById(R.id.user_name);
+        mUserInfo = (TextView)headerView.findViewById(R.id.user_info);
+        mUserPhoto = (ImageView)headerView.findViewById(R.id.user_photo);
+
         initPageMark();
 
         mListView = (ListView)findViewById(R.id.event_list);
@@ -151,10 +170,18 @@ public class MainActivity extends AppCompatActivity {
 
         mBTAdapter = BluetoothAdapter.getDefaultAdapter();
 
+        ArrayList<String> missingPermissions = new ArrayList<>();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
+            missingPermissions.add(Manifest.permission.RECEIVE_SMS);
+        }
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_CODE_LOCATION);
+            missingPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
         } else {
             initializeBluetooth();
+        }
+
+        if (missingPermissions.size() > 0) {
+            ActivityCompat.requestPermissions(this, missingPermissions.toArray(new String[missingPermissions.size()]), REQUEST_CODE_PERMISSION);
         }
     }
 
@@ -174,12 +201,17 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == REQUEST_CODE_LOCATION) {
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initializeBluetooth();
-            } else {
-                Log.d(TAG, "failed to grant permission.");
-                Toast.makeText(this, "failed to grant permission.", Toast.LENGTH_SHORT).show();
+        if (requestCode == REQUEST_CODE_PERMISSION) {
+            for (int i = 0; i < permissions.length; i++) {
+                Log.d(TAG, "permission = " + permissions[i] + " grantResult = " + (grantResults[i] == PackageManager.PERMISSION_GRANTED));
+                if (permissions[i].equals(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                        initializeBluetooth();
+                    } else {
+                        Log.d(TAG, "failed to grant bluetooth permission.");
+                        Toast.makeText(this, "failed to grant bluetooth permission.", Toast.LENGTH_SHORT).show();
+                    }
+                }
             }
         }
     }
@@ -247,6 +279,35 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        SharedPreferences sp = getSharedPreferences(getPackageName(), MODE_PRIVATE);
+        String name = sp.getString("name", null);
+        String phoneNumber = sp.getString("phone_number", null);
+        if (!TextUtils.isEmpty(phoneNumber)) {
+            name += "(" + phoneNumber + ")";
+        }
+        final int gender = sp.getInt("gender", 0);
+        String strGender = getString(R.string.label_radio_button_male);
+        if (gender == 1) {
+            strGender = getString(R.string.label_radio_button_female);
+        }
+
+        final float height = sp.getFloat("height", (float) 0.0);
+        String strHeight = String.valueOf(height);
+
+        final float weight = sp.getFloat("weight", (float) 0.0);
+        String strWeight = String.valueOf(weight);
+
+        String photoPath = sp.getString("user_photo_file", null);
+        if (!TextUtils.isEmpty(photoPath)) {
+            File img = new File(photoPath);
+            Bitmap bitmap = BitmapFactory.decodeFile(img.getAbsolutePath());
+            BitmapDrawable d = new BitmapDrawable(getResources(), bitmap);
+            mUserPhoto.setImageDrawable(d);
+        }
+
+        Log.d(TAG, "onResume name = " + name + " mUserName = " + mUserName);
+        mUserName.setText(name);
+        mUserInfo.setText(strGender + ", " + strHeight + "cm, " + strWeight + "kg");
     }
 
     @Override

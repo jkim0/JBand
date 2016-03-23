@@ -10,6 +10,7 @@ interface IGaiaControlService {
     void disconnect();
     boolean isConnected();
     void setSleepMode(boolean mode);
+    void sendCommand(int vendorId, int commandId, in byte[] payload);
     void registerEventListener(IGaiaEventListener listener);
     void unregisterEventListener(IGaiaEventListener listener);
 }

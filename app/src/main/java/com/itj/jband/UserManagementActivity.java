@@ -15,6 +15,7 @@ import android.provider.MediaStore;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -172,6 +173,11 @@ public class UserManagementActivity extends AppCompatActivity {
         initializeValues();
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
     private void initializeValues() {
         SharedPreferences sp = getSharedPreferences(getPackageName(), MODE_PRIVATE);
         final String name = sp.getString("name", "");
@@ -188,6 +194,14 @@ public class UserManagementActivity extends AppCompatActivity {
 
         final float weight = sp.getFloat("weight", (float)0.0);
         mWeight.setText(String.valueOf(weight));
+
+        String photoPath = sp.getString("user_photo_file", null);
+        if (!TextUtils.isEmpty(photoPath)) {
+            File img = new File(photoPath);
+            Bitmap bitmap = BitmapFactory.decodeFile(img.getAbsolutePath());
+            BitmapDrawable d = new BitmapDrawable(getResources(), bitmap);
+            mPhoto.setImageDrawable(d);
+        }
     }
 
     @Override
@@ -233,6 +247,12 @@ public class UserManagementActivity extends AppCompatActivity {
 
         final float weight = Float.valueOf(mWeight.getText().toString());
         editor.putFloat("weight", weight);
+
+        File file = new File(getAlbumStorageDir(getPackageName()), "temp_photo.jpg");
+        File destFile = new File(getAlbumStorageDir(getPackageName()), "user_photo.jpg");
+        file.renameTo(destFile);
+
+        editor.putString("user_photo_file", destFile.getAbsolutePath());
 
         editor.commit();
         finish();
